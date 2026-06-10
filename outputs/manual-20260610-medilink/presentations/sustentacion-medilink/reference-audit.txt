@@ -1,0 +1,17 @@
+No se proporcionó una presentación de referencia.
+
+Sistema visual adoptado:
+- formato panorámico 16:9
+- fondo blanco y azul muy claro
+- azul MediLink como color principal
+- azul marino para títulos
+- verde para evidencia funcional
+- rojo reservado para problemas y riesgos
+- capturas en marcos de navegador sencillos
+- diagramas nativos y editables
+
+Antipatrones evitados:
+- diapositivas llenas de texto
+- cuadrículas repetitivas de tarjetas sin narrativa
+- diagramas genéricos sin tecnologías concretas
+- incluir funciones fuera del alcance real

@@ -1,0 +1,168 @@
+{
+  "output": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\output\\MediLink-Sustentacion.pptx",
+  "outputBytes": 509507,
+  "slideCount": 15,
+  "slideSize": {
+    "width": 1280,
+    "height": 720
+  },
+  "previewDir": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\preview",
+  "previewPaths": [
+    "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\preview\\slide-01.png",
+    "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\preview\\slide-02.png",
+    "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\preview\\slide-03.png",
+    "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\preview\\slide-04.png",
+    "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\preview\\slide-05.png",
+    "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\preview\\slide-06.png",
+    "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\preview\\slide-07.png",
+    "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\preview\\slide-08.png",
+    "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\preview\\slide-09.png",
+    "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\preview\\slide-10.png",
+    "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\preview\\slide-11.png",
+    "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\preview\\slide-12.png",
+    "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\preview\\slide-13.png",
+    "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\preview\\slide-14.png",
+    "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\preview\\slide-15.png"
+  ],
+  "layoutDir": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\layout",
+  "layoutResults": [
+    {
+      "layoutPath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\layout\\slide-01.layout.json"
+    },
+    {
+      "layoutPath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\layout\\slide-02.layout.json"
+    },
+    {
+      "layoutPath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\layout\\slide-03.layout.json"
+    },
+    {
+      "layoutPath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\layout\\slide-04.layout.json"
+    },
+    {
+      "layoutPath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\layout\\slide-05.layout.json"
+    },
+    {
+      "layoutPath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\layout\\slide-06.layout.json"
+    },
+    {
+      "layoutPath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\layout\\slide-07.layout.json"
+    },
+    {
+      "layoutPath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\layout\\slide-08.layout.json"
+    },
+    {
+      "layoutPath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\layout\\slide-09.layout.json"
+    },
+    {
+      "layoutPath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\layout\\slide-10.layout.json"
+    },
+    {
+      "layoutPath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\layout\\slide-11.layout.json"
+    },
+    {
+      "layoutPath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\layout\\slide-12.layout.json"
+    },
+    {
+      "layoutPath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\layout\\slide-13.layout.json"
+    },
+    {
+      "layoutPath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\layout\\slide-14.layout.json"
+    },
+    {
+      "layoutPath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\layout\\slide-15.layout.json"
+    }
+  ],
+  "contactSheet": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\qa\\contact-sheet.png",
+  "slides": [
+    {
+      "index": 1,
+      "requestedSlideNumber": 1,
+      "modulePath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\slides\\slide-01.mjs",
+      "exportName": "slide01"
+    },
+    {
+      "index": 2,
+      "requestedSlideNumber": 2,
+      "modulePath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\slides\\slide-02.mjs",
+      "exportName": "slide02"
+    },
+    {
+      "index": 3,
+      "requestedSlideNumber": 3,
+      "modulePath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\slides\\slide-03.mjs",
+      "exportName": "slide03"
+    },
+    {
+      "index": 4,
+      "requestedSlideNumber": 4,
+      "modulePath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\slides\\slide-04.mjs",
+      "exportName": "slide04"
+    },
+    {
+      "index": 5,
+      "requestedSlideNumber": 5,
+      "modulePath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\slides\\slide-05.mjs",
+      "exportName": "slide05"
+    },
+    {
+      "index": 6,
+      "requestedSlideNumber": 6,
+      "modulePath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\slides\\slide-06.mjs",
+      "exportName": "slide06"
+    },
+    {
+      "index": 7,
+      "requestedSlideNumber": 7,
+      "modulePath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\slides\\slide-07.mjs",
+      "exportName": "slide07"
+    },
+    {
+      "index": 8,
+      "requestedSlideNumber": 8,
+      "modulePath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\slides\\slide-08.mjs",
+      "exportName": "slide08"
+    },
+    {
+      "index": 9,
+      "requestedSlideNumber": 9,
+      "modulePath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\slides\\slide-09.mjs",
+      "exportName": "slide09"
+    },
+    {
+      "index": 10,
+      "requestedSlideNumber": 10,
+      "modulePath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\slides\\slide-10.mjs",
+      "exportName": "slide10"
+    },
+    {
+      "index": 11,
+      "requestedSlideNumber": 11,
+      "modulePath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\slides\\slide-11.mjs",
+      "exportName": "slide11"
+    },
+    {
+      "index": 12,
+      "requestedSlideNumber": 12,
+      "modulePath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\slides\\slide-12.mjs",
+      "exportName": "slide12"
+    },
+    {
+      "index": 13,
+      "requestedSlideNumber": 13,
+      "modulePath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\slides\\slide-13.mjs",
+      "exportName": "slide13"
+    },
+    {
+      "index": 14,
+      "requestedSlideNumber": 14,
+      "modulePath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\slides\\slide-14.mjs",
+      "exportName": "slide14"
+    },
+    {
+      "index": 15,
+      "requestedSlideNumber": 15,
+      "modulePath": "C:\\Users\\hp\\Desktop\\medilink-paciente\\outputs\\manual-20260610-medilink\\presentations\\sustentacion-medilink\\slides\\slide-15.mjs",
+      "exportName": "slide15"
+    }
+  ]
+}

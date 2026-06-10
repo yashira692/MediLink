@@ -1,148 +1,296 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
+import {
+  api,
+  descargarArchivo,
+  eliminarToken,
+  guardarToken,
+  obtenerToken,
+} from './services/api.js'
 
-function obtenerDatos(clave, valorInicial) {
-  const datosGuardados = localStorage.getItem(clave)
+function fechaActual() {
+  const ahora = new Date()
+  const desplazamiento = ahora.getTimezoneOffset() * 60000
+  return new Date(ahora.getTime() - desplazamiento).toISOString().slice(0, 10)
+}
 
-  if (datosGuardados) {
-    return JSON.parse(datosGuardados)
-  }
+function formatearFecha(fecha) {
+  return new Intl.DateTimeFormat('es-PE', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${fecha}T00:00:00Z`))
+}
 
-  return valorInicial
+function formatearHora(hora) {
+  const [horas, minutos] = hora.slice(0, 5).split(':').map(Number)
+  return new Intl.DateTimeFormat('es-PE', {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(2000, 0, 1, horas, minutos))
+}
+
+function etiquetaEstado(estado) {
+  return estado.charAt(0).toUpperCase() + estado.slice(1)
+}
+
+function formatearFechaHora(fecha) {
+  return new Intl.DateTimeFormat('es-PE', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(fecha))
 }
 
 function App() {
   const [vista, setVista] = useState('dashboard')
   const [menuUsuario, setMenuUsuario] = useState(false)
-  const [citas, setCitas] = useState(() =>
-    obtenerDatos('citasMedilink', [
-      {
-        id: 1,
-        medico: 'Dr. Michael Chen',
-        especialidad: 'Cardiología',
-        fecha: '28 mayo 2026',
-        hora: '10:00 AM',
-        estado: 'Confirmada'
-      },
-      {
-        id: 2,
-        medico: 'Dra. Emily Roberts',
-        especialidad: 'Medicina General',
-        fecha: '02 junio 2026',
-        hora: '2:30 PM',
-        estado: 'Confirmada'
-      }
-    ])
-  )
+  const [citas, setCitas] = useState([])
+  const [confirmacion, setConfirmacion] = useState(null)
+  const [procesandoConfirmacion, setProcesandoConfirmacion] = useState(false)
+  const [aviso, setAviso] = useState(null)
 
-  const [notificaciones, setNotificaciones] = useState(() =>
-    obtenerDatos('notificacionesMedilink', [
-      'Tienes una cita confirmada con Cardiología el 28 de mayo.',
-      'Tu receta digital está disponible en el historial médico.',
-      'Recuerda llegar 10 minutos antes de tu consulta.'
-    ])
-  )
+  const [notificaciones, setNotificaciones] = useState([])
 
-  const [paciente, setPaciente] = useState(() =>
-    obtenerDatos('pacienteMedilink', {
-      nombres: 'Yashira',
-      apellidos: 'Rojas',
-      dni: '76543210',
-      correo: 'paciente@medilink.pe',
-      telefono: '987654321',
-      fechaNacimiento: '2004-05-15',
-      direccion: 'Santa Anita, Lima'
-    })
-  )
-
-  const [sesionActiva, setSesionActiva] = useState(() =>
-    obtenerDatos('sesionMedilink', false)
-  )
+  const [paciente, setPaciente] = useState(null)
+  const [sesionActiva, setSesionActiva] = useState(Boolean(obtenerToken()))
+  const [cargandoSesion, setCargandoSesion] = useState(Boolean(obtenerToken()))
 
   useEffect(() => {
-    localStorage.setItem('citasMedilink', JSON.stringify(citas))
-  }, [citas])
+    if (!obtenerToken()) return
+
+    api('/paciente/perfil')
+      .then(({ paciente: pacienteActual }) => {
+        setPaciente(pacienteActual)
+        setSesionActiva(true)
+      })
+      .catch(() => {
+        eliminarToken()
+        setSesionActiva(false)
+      })
+      .finally(() => setCargandoSesion(false))
+  }, [])
 
   useEffect(() => {
-    localStorage.setItem('notificacionesMedilink', JSON.stringify(notificaciones))
-  }, [notificaciones])
+    if (!sesionActiva || !obtenerToken()) return
 
-  useEffect(() => {
-    localStorage.setItem('pacienteMedilink', JSON.stringify(paciente))
-  }, [paciente])
-
-  useEffect(() => {
-    localStorage.setItem('sesionMedilink', JSON.stringify(sesionActiva))
+    cargarCitas()
+    cargarNotificaciones()
   }, [sesionActiva])
 
-  
-
-  function reservarCita(nuevaCita) {
-    setCitas([...citas, nuevaCita])
-    setNotificaciones([
-      `Nueva cita reservada con ${nuevaCita.medico} para el ${nuevaCita.fecha}.`,
-      ...notificaciones
-    ])
-    setVista('dashboard')
-  }
-
-  function cancelarCita(id) {
-    const nuevasCitas = citas.map((cita) =>
-      cita.id === id ? { ...cita, estado: 'Cancelada' } : cita
-    )
-    setCitas(nuevasCitas)
-    setNotificaciones(['Una cita fue cancelada correctamente.', ...notificaciones])
-  }
-
-  function reprogramarCita(id, nuevaFecha, nuevaHora) {
-  if (!nuevaFecha || !nuevaHora) {
-    alert('Selecciona una nueva fecha y hora.')
-    return
-  }
-
-  const citasActualizadas = citas.map((cita) =>
-    cita.id === id
-      ? { ...cita, fecha: nuevaFecha, hora: nuevaHora, estado: 'Reprogramada' }
-      : cita
-  )
-
-  setCitas(citasActualizadas)
-
-  setNotificaciones([
-    'Una cita fue reprogramada correctamente.',
-    ...notificaciones
-  ])
-
-  alert('Cita reprogramada correctamente.')
-}
-
-  function iniciarSesion(correo, password) {
-    if (correo === paciente.correo && password === '123456') {
-      setSesionActiva(true)
-    } else {
-      alert('Correo o contraseña incorrectos.')
+  async function cargarCitas() {
+    try {
+      const datos = await api('/citas')
+      setCitas(datos.citas)
+    } catch (error) {
+      alert(error.message)
     }
   }
 
-  function registrarPaciente(nuevoPaciente) {
-    setPaciente(nuevoPaciente)
-    setSesionActiva(true)
-    setNotificaciones([
-      'Cuenta de paciente creada correctamente.',
-      ...notificaciones
-    ])
+  async function cargarNotificaciones() {
+    try {
+      await api('/notificaciones/generar-recordatorios', {
+        method: 'POST',
+      })
+      const datos = await api('/notificaciones')
+      setNotificaciones(datos.notificaciones)
+    } catch (error) {
+      alert(error.message)
+    }
+  }
+
+  async function reservarCita(nuevaCita) {
+    const datos = await api('/citas', {
+      method: 'POST',
+      body: JSON.stringify(nuevaCita),
+    })
+
+    await cargarCitas()
+    await cargarNotificaciones()
+    setVista('dashboard')
+    return datos
+  }
+
+  useEffect(() => {
+    if (!aviso) return undefined
+
+    const temporizador = setTimeout(() => setAviso(null), 3500)
+    return () => clearTimeout(temporizador)
+  }, [aviso])
+
+  useEffect(() => {
+    const alertaOriginal = window.alert
+
+    window.alert = (mensaje) => {
+      const texto = String(mensaje)
+      const esExito = /correctamente|exitosa|reservada|actualizada|registrado/i.test(texto)
+      setAviso({
+        tipo: esExito ? 'exito' : 'info',
+        mensaje: texto,
+      })
+    }
+
+    return () => {
+      window.alert = alertaOriginal
+    }
+  }, [])
+
+  function solicitarConfirmacion(configuracion) {
+    setConfirmacion(configuracion)
+  }
+
+  function cancelarCita(id) {
+    solicitarConfirmacion({
+      titulo: 'Cancelar cita',
+      mensaje:
+        '¿Confirmas que deseas cancelar esta cita? Esta acción no se puede deshacer.',
+      textoConfirmar: 'Sí, cancelar cita',
+      textoProcesando: 'Cancelando...',
+      accion: async () => {
+        const datos = await api(`/citas/${id}/cancelar`, {
+          method: 'PATCH',
+          body: JSON.stringify({ motivo: 'Cancelada por el paciente' }),
+        })
+        await cargarCitas()
+        await cargarNotificaciones()
+        setAviso({ tipo: 'exito', mensaje: datos.mensaje })
+      },
+    })
+  }
+
+  async function ejecutarConfirmacion() {
+    if (!confirmacion) return
+
+    setProcesandoConfirmacion(true)
+
+    try {
+      await confirmacion.accion()
+      setConfirmacion(null)
+    } catch (error) {
+      setAviso({ tipo: 'error', mensaje: error.message })
+    } finally {
+      setProcesandoConfirmacion(false)
+    }
+  }
+
+  async function reprogramarCita(id, nuevaFecha, nuevaHora) {
+    const datos = await api(`/citas/${id}/reprogramar`, {
+      method: 'PUT',
+      body: JSON.stringify({ fecha: nuevaFecha, hora: nuevaHora }),
+    })
+    await cargarCitas()
+    await cargarNotificaciones()
+    return datos
+  }
+
+  async function iniciarSesion(correo, password) {
+    try {
+      const datos = await api('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ correo, password }),
+      })
+
+      guardarToken(datos.token)
+      setPaciente(datos.paciente)
+      setSesionActiva(true)
+    } catch (error) {
+      alert(error.message)
+    }
+  }
+
+  async function registrarPaciente(nuevoPaciente) {
+    try {
+      const datos = await api('/auth/registro', {
+        method: 'POST',
+        body: JSON.stringify(nuevoPaciente),
+      })
+
+      guardarToken(datos.token)
+      setPaciente(datos.paciente)
+      setSesionActiva(true)
+    } catch (error) {
+      alert(error.message)
+    }
+  }
+
+  async function actualizarPerfil(datosPerfil) {
+    const datos = await api('/paciente/perfil', {
+      method: 'PUT',
+      body: JSON.stringify({
+        correo: datosPerfil.correo,
+        telefono: datosPerfil.telefono,
+        direccion: datosPerfil.direccion,
+      }),
+    })
+
+    setPaciente(datos.paciente)
+    await cargarNotificaciones()
+
+    return datos
+  }
+
+  async function marcarNotificacionLeida(id) {
+    try {
+      await api(`/notificaciones/${id}/leer`, { method: 'PATCH' })
+      setNotificaciones((actuales) =>
+        actuales.map((notificacion) =>
+          notificacion.id === id
+            ? {
+                ...notificacion,
+                leido: 1,
+                fechaLectura: new Date().toISOString(),
+              }
+            : notificacion,
+        ),
+      )
+    } catch (error) {
+      alert(error.message)
+    }
+  }
+
+  async function marcarTodasLeidas() {
+    try {
+      await api('/notificaciones/leer-todas', { method: 'PATCH' })
+      const fechaLectura = new Date().toISOString()
+      setNotificaciones((actuales) =>
+        actuales.map((notificacion) => ({
+          ...notificacion,
+          leido: 1,
+          fechaLectura: notificacion.fechaLectura || fechaLectura,
+        })),
+      )
+    } catch (error) {
+      alert(error.message)
+    }
   }
 
   function cerrarSesion() {
+    eliminarToken()
+    setPaciente(null)
     setSesionActiva(false)
+  }
+
+  const notificacionesNoLeidas = notificaciones.filter(
+    (notificacion) => !notificacion.leido,
+  ).length
+
+  if (cargandoSesion) {
+    return <div className="session-loading">Verificando sesión...</div>
   }
 
   if (!sesionActiva) {
     return (
-      <LoginRegistro
-        iniciarSesion={iniciarSesion}
-        registrarPaciente={registrarPaciente}
-      />
+      <>
+        <LoginRegistro
+          iniciarSesion={iniciarSesion}
+          registrarPaciente={registrarPaciente}
+        />
+        {aviso && (
+          <div className={`app-toast ${aviso.tipo}`} role="status">
+            {aviso.mensaje}
+          </div>
+        )}
+      </>
     )
   }
 
@@ -198,7 +346,7 @@ function App() {
           <div className="header-actions">
             <button className="bell" onClick={() => setVista('notificaciones')}>
               🔔
-              {notificaciones.length > 0 && <span>{notificaciones.length}</span>}
+              {notificacionesNoLeidas > 0 && <span>{notificacionesNoLeidas}</span>}
             </button>
 
             <div className="user-menu">
@@ -260,30 +408,78 @@ function App() {
           )}
 
           {vista === 'asistente' && (
-            <AsistenteIA />
+            <AsistenteIA solicitarConfirmacion={solicitarConfirmacion} />
           )}
 
           {vista === 'notificaciones' && (
-            <Notificaciones notificaciones={notificaciones} />
+            <Notificaciones
+              notificaciones={notificaciones}
+              marcarLeida={marcarNotificacionLeida}
+              marcarTodas={marcarTodasLeidas}
+            />
             
           )}
 
           {vista === 'perfil' && (
             <PerfilPaciente 
               paciente={paciente} 
-              setPaciente={setPaciente} 
-              setNotificaciones={setNotificaciones}
-              notificaciones={notificaciones}
+              actualizarPerfil={actualizarPerfil}
+              cerrarSesion={cerrarSesion}
             />
           )}
 
         </section>
       </main>
+
+      {confirmacion && (
+        <div className="modal-overlay" role="presentation">
+          <div
+            className="confirm-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirmacion-titulo"
+          >
+            <div className="confirm-icon">!</div>
+            <h3 id="confirmacion-titulo">{confirmacion.titulo}</h3>
+            <p>{confirmacion.mensaje}</p>
+            <div className="confirm-actions">
+              <button
+                className="modal-secondary-btn"
+                onClick={() => setConfirmacion(null)}
+                disabled={procesandoConfirmacion}
+              >
+                Volver
+              </button>
+              <button
+                className="modal-danger-btn"
+                onClick={ejecutarConfirmacion}
+                disabled={procesandoConfirmacion}
+              >
+                {procesandoConfirmacion
+                  ? confirmacion.textoProcesando
+                  : confirmacion.textoConfirmar}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {aviso && (
+        <div className={`app-toast ${aviso.tipo}`} role="status">
+          {aviso.mensaje}
+        </div>
+      )}
     </div>
   )
 }
 
 function Dashboard({ citas, setVista, cancelarCita }) {
+  const proximasCitas = citas.filter(
+    (cita) =>
+      ['pendiente', 'confirmada', 'reprogramada'].includes(cita.estado) &&
+      new Date(`${cita.fecha}T${cita.hora}`) > new Date(),
+  )
+
   return (
     <>
       <h1>Bienvenida a MediLink</h1>
@@ -309,25 +505,27 @@ function Dashboard({ citas, setVista, cancelarCita }) {
       <div className="panel">
         <h3>Próximas citas</h3>
 
-        {citas.map((cita) => (
+        {proximasCitas.length === 0 && (
+          <p>No tienes próximas citas registradas.</p>
+        )}
+
+        {proximasCitas.map((cita) => (
           <div className="appointment" key={cita.id}>
             <div>
               <h4>{cita.medico}</h4>
               <p>{cita.especialidad}</p>
-              <span>{cita.fecha} - {cita.hora}</span>
+              <span>{formatearFecha(cita.fecha)} - {formatearHora(cita.hora)}</span>
             </div>
 
-            <span className={cita.estado === 'Cancelada' ? 'estado cancelada' : 'estado'}>
-              {cita.estado}
-              {cita.estado !== 'Cancelada' && (
-                <button 
-                  className="cancel-btn" 
-                  onClick={() => cancelarCita(cita.id)}
-                >
-                  Cancelar cita
-                </button>
-              )}
-            </span>
+            <div className="cita-actions">
+              <span className="estado">{etiquetaEstado(cita.estado)}</span>
+              <button
+                className="cancel-btn"
+                onClick={() => cancelarCita(cita.id)}
+              >
+                Cancelar cita
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -340,33 +538,75 @@ function ReservarCita({ reservarCita }) {
   const [medico, setMedico] = useState('')
   const [fecha, setFecha] = useState('')
   const [hora, setHora] = useState('')
+  const [motivo, setMotivo] = useState('')
+  const [catalogo, setCatalogo] = useState({
+    especialidades: [],
+    medicos: [],
+  })
+  const [horarios, setHorarios] = useState([])
+  const [cargandoHorarios, setCargandoHorarios] = useState(false)
+  const [enviando, setEnviando] = useState(false)
 
-  const medicos = {
-    'Medicina General': ['Dra. Emily Roberts'],
-    'Cardiología': ['Dr. Michael Chen'],
-    'Dermatología': ['Dra. Valeria Torres'],
-    'Pediatría': ['Dr. Luis Herrera']
+  useEffect(() => {
+    api('/citas/catalogo')
+      .then(setCatalogo)
+      .catch((error) => alert(error.message))
+  }, [])
+
+  async function buscarHorarios(fechaSeleccionada) {
+    setFecha(fechaSeleccionada)
+    setHora('')
+    setHorarios([])
+
+    if (!medico || !fechaSeleccionada) return
+
+    setCargandoHorarios(true)
+
+    try {
+      const datos = await api(
+        `/citas/horarios?idMedico=${medico}&fecha=${fechaSeleccionada}`,
+      )
+      setHorarios(datos.horarios)
+    } catch (error) {
+      alert(error.message)
+    } finally {
+      setCargandoHorarios(false)
+    }
   }
 
-  function enviarFormulario(e) {
+  const medicosDisponibles = catalogo.medicos.filter(
+    (item) => String(item.idEspecialidad) === especialidad,
+  )
+  const medicoSeleccionado = catalogo.medicos.find(
+    (item) => String(item.id) === medico,
+  )
+  const especialidadSeleccionada = catalogo.especialidades.find(
+    (item) => String(item.id) === especialidad,
+  )
+
+  async function enviarFormulario(e) {
     e.preventDefault()
 
-    if (!especialidad || !medico || !fecha || !hora) {
+    if (!especialidad || !medico || !fecha || !hora || !motivo.trim()) {
       alert('Completa todos los campos para reservar la cita.')
       return
     }
 
-    const nuevaCita = {
-      id: Date.now(),
-      medico,
-      especialidad,
-      fecha,
-      hora,
-      estado: 'Confirmada'
-    }
+    setEnviando(true)
 
-    reservarCita(nuevaCita)
-    alert('Cita reservada correctamente.')
+    try {
+      const datos = await reservarCita({
+        idMedico: Number(medico),
+        fecha,
+        hora,
+        motivo,
+      })
+      alert(datos.mensaje)
+    } catch (error) {
+      alert(error.message)
+    } finally {
+      setEnviando(false)
+    }
   }
 
   return (
@@ -382,49 +622,79 @@ function ReservarCita({ reservarCita }) {
           <select value={especialidad} onChange={(e) => {
             setEspecialidad(e.target.value)
             setMedico('')
+            setFecha('')
+            setHora('')
+            setHorarios([])
           }}>
             <option value="">Seleccionar especialidad</option>
-            <option value="Medicina General">Medicina General</option>
-            <option value="Cardiología">Cardiología</option>
-            <option value="Dermatología">Dermatología</option>
-            <option value="Pediatría">Pediatría</option>
+            {catalogo.especialidades.map((item) => (
+              <option key={item.id} value={item.id}>{item.nombre}</option>
+            ))}
           </select>
 
           <label>Médico</label>
-          <select value={medico} onChange={(e) => setMedico(e.target.value)}>
+          <select value={medico} onChange={(e) => {
+            setMedico(e.target.value)
+            setFecha('')
+            setHora('')
+            setHorarios([])
+          }}>
             <option value="">Seleccionar médico</option>
-            {especialidad &&
-              medicos[especialidad].map((nombre) => (
-                <option key={nombre} value={nombre}>{nombre}</option>
-              ))
-            }
+            {medicosDisponibles.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nombre} - {item.cmp}
+              </option>
+            ))}
           </select>
 
           <label>Fecha</label>
           <input
             type="date"
             value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
+            onChange={(e) => buscarHorarios(e.target.value)}
+            min={fechaActual()}
           />
 
           <label>Hora</label>
-          <select value={hora} onChange={(e) => setHora(e.target.value)}>
-            <option value="">Seleccionar hora</option>
-            <option value="08:00 AM">08:00 AM</option>
-            <option value="10:00 AM">10:00 AM</option>
-            <option value="2:30 PM">2:30 PM</option>
-            <option value="4:00 PM">4:00 PM</option>
+          <select
+            value={hora}
+            onChange={(e) => setHora(e.target.value)}
+            disabled={!medico || !fecha || cargandoHorarios}
+          >
+            <option value="">
+              {cargandoHorarios ? 'Consultando horarios...' : 'Seleccionar hora'}
+            </option>
+            {horarios.map((horaDisponible) => (
+              <option key={horaDisponible} value={horaDisponible}>
+                {formatearHora(horaDisponible)}
+              </option>
+            ))}
           </select>
 
-          <button type="submit">Reservar cita</button>
+          {medico && fecha && !cargandoHorarios && horarios.length === 0 && (
+            <p className="form-help">No hay horarios disponibles para esta fecha.</p>
+          )}
+
+          <label>Motivo de consulta</label>
+          <textarea
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Describe brevemente el motivo de la cita"
+            maxLength={500}
+          />
+
+          <button type="submit" disabled={enviando}>
+            {enviando ? 'Reservando...' : 'Reservar cita'}
+          </button>
         </form>
 
         <div className="summary-card">
           <h3>Resumen de reserva</h3>
-          <p><strong>Especialidad:</strong> {especialidad || 'No seleccionada'}</p>
-          <p><strong>Médico:</strong> {medico || 'No seleccionado'}</p>
-          <p><strong>Fecha:</strong> {fecha || 'No seleccionada'}</p>
-          <p><strong>Hora:</strong> {hora || 'No seleccionada'}</p>
+          <p><strong>Especialidad:</strong> {especialidadSeleccionada?.nombre || 'No seleccionada'}</p>
+          <p><strong>Médico:</strong> {medicoSeleccionado?.nombre || 'No seleccionado'}</p>
+          <p><strong>Fecha:</strong> {fecha ? formatearFecha(fecha) : 'No seleccionada'}</p>
+          <p><strong>Hora:</strong> {hora ? formatearHora(hora) : 'No seleccionada'}</p>
+          <p><strong>Motivo:</strong> {motivo || 'No indicado'}</p>
         </div>
       </div>
     </>
@@ -433,28 +703,33 @@ function ReservarCita({ reservarCita }) {
 
 function HistorialMedico() {
   const [pestana, setPestana] = useState('consultas')
+  const [historial, setHistorial] = useState({
+    consultas: [],
+    recetas: [],
+    resultados: [],
+  })
+  const [cargando, setCargando] = useState(true)
+  const [descargando, setDescargando] = useState(null)
 
-  function descargarReporte(nombreReporte) {
-    const contenido = `
-MEDILINK - REPORTE MÉDICO
+  useEffect(() => {
+    api('/historial')
+      .then(setHistorial)
+      .catch((error) => alert(error.message))
+      .finally(() => setCargando(false))
+  }, [])
 
-Paciente: Yashira Rojas
-Reporte: ${nombreReporte}
-Fecha de descarga: ${new Date().toLocaleDateString()}
+  async function descargarDocumento(idDocumento) {
+    setDescargando(idDocumento)
 
-Este documento corresponde a una constancia generada por el sistema MediLink.
-La información mostrada pertenece al historial médico digital del paciente.
-`
-
-    const archivo = new Blob([contenido], { type: 'text/plain' })
-    const url = URL.createObjectURL(archivo)
-
-    const enlace = document.createElement('a')
-    enlace.href = url
-    enlace.download = `${nombreReporte}.txt`
-    enlace.click()
-
-    URL.revokeObjectURL(url)
+    try {
+      await descargarArchivo(
+        `/historial/documentos/${idDocumento}/descargar`,
+      )
+    } catch (error) {
+      alert(error.message)
+    } finally {
+      setDescargando(null)
+    }
   }
 
   return (
@@ -464,6 +739,10 @@ La información mostrada pertenece al historial médico digital del paciente.
         Consulta tus registros médicos, recetas digitales y resultados de laboratorio.
       </p>
 
+      {cargando && <div className="panel">Cargando historial médico...</div>}
+
+      {!cargando && (
+        <>
       <div className="tabs">
         <button
           className={pestana === 'consultas' ? 'tab active-tab' : 'tab'}
@@ -491,41 +770,39 @@ La información mostrada pertenece al historial médico digital del paciente.
         <div className="panel">
           <h3>Consultas médicas</h3>
 
-          <div className="history-item">
-            <div className="history-top">
-              <div>
-                <h4>Dra. Emily Roberts</h4>
-                <p>Medicina General</p>
+          {historial.consultas.length === 0 && (
+            <p>No tienes consultas médicas registradas.</p>
+          )}
+
+          {historial.consultas.map((consulta) => (
+            <div className="history-item" key={consulta.id}>
+              <div className="history-top">
+                <div>
+                  <h4>{consulta.medico}</h4>
+                  <p>{consulta.especialidad}</p>
+                </div>
+                <span className="estado">Completada</span>
               </div>
-              <span className="estado">Completado</span>
+
+              <span>{formatearFecha(consulta.fecha)}</span>
+              <p>{consulta.descripcion}</p>
+              <p><strong>Diagnóstico:</strong> {consulta.diagnostico}</p>
+              {consulta.observaciones && (
+                <p><strong>Observaciones:</strong> {consulta.observaciones}</p>
+              )}
+
+              {consulta.idDocumento && (
+                <button
+                  disabled={descargando === consulta.idDocumento}
+                  onClick={() => descargarDocumento(consulta.idDocumento)}
+                >
+                  {descargando === consulta.idDocumento
+                    ? 'Descargando...'
+                    : 'Descargar informe PDF'}
+                </button>
+              )}
             </div>
-
-            <span>15 mayo 2026</span>
-            <p>Chequeo anual. Signos vitales normales.</p>
-            <p><strong>Diagnóstico:</strong> Paciente estable, sin hallazgos de alarma.</p>
-
-            <button onClick={() => descargarReporte('reporte-consulta-medicina-general')}>
-              Descargar reporte
-            </button>
-          </div>
-
-          <div className="history-item">
-            <div className="history-top">
-              <div>
-                <h4>Dr. Michael Chen</h4>
-                <p>Cardiología</p>
-              </div>
-              <span className="estado">Completado</span>
-            </div>
-
-            <span>20 abril 2026</span>
-            <p>Evaluación cardiológica preventiva.</p>
-            <p><strong>Diagnóstico:</strong> Frecuencia cardiaca dentro de rangos normales.</p>
-
-            <button onClick={() => descargarReporte('reporte-consulta-cardiologia')}>
-              Descargar reporte
-            </button>
-          </div>
+          ))}
         </div>
       )}
 
@@ -533,27 +810,40 @@ La información mostrada pertenece al historial médico digital del paciente.
         <div className="panel">
           <h3>Recetas digitales</h3>
 
-          <div className="history-item">
-            <h4>Paracetamol 500 mg</h4>
-            <p><strong>Indicación:</strong> Tomar solo en caso de dolor o fiebre.</p>
-            <p><strong>Médico:</strong> Dra. Emily Roberts</p>
-            <p><strong>Fecha:</strong> 15 mayo 2026</p>
+          {historial.recetas.length === 0 && (
+            <p>No tienes recetas digitales registradas.</p>
+          )}
 
-            <button onClick={() => descargarReporte('receta-paracetamol')}>
-              Descargar receta
-            </button>
-          </div>
+          {historial.recetas.map((receta) => (
+            <div className="history-item" key={receta.id}>
+              <h4>Receta de {receta.medico}</h4>
+              <p><strong>Especialidad:</strong> {receta.especialidad}</p>
+              <p><strong>Fecha:</strong> {formatearFecha(receta.fecha)}</p>
 
-          <div className="history-item">
-            <h4>Control preventivo</h4>
-            <p><strong>Indicación:</strong> Mantener hábitos saludables y asistir a control periódico.</p>
-            <p><strong>Médico:</strong> Dr. Michael Chen</p>
-            <p><strong>Fecha:</strong> 20 abril 2026</p>
+              {receta.medicamentos.map((medicamento) => (
+                <div className="medicine-item" key={`${receta.id}-${medicamento.medicamento}`}>
+                  <strong>{medicamento.medicamento} {medicamento.dosis}</strong>
+                  <p>{medicamento.frecuencia} durante {medicamento.duracion}.</p>
+                  {medicamento.indicacion && <p>{medicamento.indicacion}</p>}
+                </div>
+              ))}
 
-            <button onClick={() => descargarReporte('receta-control-preventivo')}>
-              Descargar receta
-            </button>
-          </div>
+              {receta.indicacionesGenerales && (
+                <p><strong>Indicaciones generales:</strong> {receta.indicacionesGenerales}</p>
+              )}
+
+              {receta.idDocumento && (
+                <button
+                  disabled={descargando === receta.idDocumento}
+                  onClick={() => descargarDocumento(receta.idDocumento)}
+                >
+                  {descargando === receta.idDocumento
+                    ? 'Descargando...'
+                    : 'Descargar receta PDF'}
+                </button>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
@@ -561,83 +851,101 @@ La información mostrada pertenece al historial médico digital del paciente.
         <div className="panel">
           <h3>Resultados de laboratorio</h3>
 
-          <div className="history-item">
-            <h4>Hemograma completo</h4>
-            <p><strong>Resultado:</strong> Valores dentro del rango normal.</p>
-            <p><strong>Fecha:</strong> 15 mayo 2026</p>
-            <span className="estado">Disponible</span>
+          {historial.resultados.length === 0 && (
+            <p>No tienes resultados de laboratorio registrados.</p>
+          )}
 
-            <br />
+          {historial.resultados.map((resultado) => (
+            <div className="history-item" key={resultado.id}>
+              <div className="history-top">
+                <div>
+                  <h4>{resultado.nombreExamen}</h4>
+                  <p><strong>Fecha:</strong> {formatearFecha(resultado.fecha)}</p>
+                </div>
+                <span className="estado">{etiquetaEstado(resultado.estado)}</span>
+              </div>
 
-            <button onClick={() => descargarReporte('resultado-hemograma-completo')}>
-              Descargar resultado
-            </button>
-          </div>
+              <p><strong>Resultado:</strong> {resultado.resultado}</p>
 
-          <div className="history-item">
-            <h4>Perfil lipídico</h4>
-            <p><strong>Resultado:</strong> Colesterol total en rango aceptable.</p>
-            <p><strong>Fecha:</strong> 20 abril 2026</p>
-            <span className="estado">Disponible</span>
-
-            <br />
-
-            <button onClick={() => descargarReporte('resultado-perfil-lipidico')}>
-              Descargar resultado
-            </button>
-          </div>
+              {resultado.idDocumento && (
+                <button
+                  disabled={descargando === resultado.idDocumento}
+                  onClick={() => descargarDocumento(resultado.idDocumento)}
+                >
+                  {descargando === resultado.idDocumento
+                    ? 'Descargando...'
+                    : 'Descargar resultado PDF'}
+                </button>
+              )}
+            </div>
+          ))}
         </div>
+      )}
+        </>
       )}
     </>
   )
 }
 
-function AsistenteIA() {
-  const [mensajes, setMensajes] = useState([
-    {
-      tipo: 'bot',
-      texto: 'Hola, soy el asistente virtual de MediLink. Puedo orientarte sobre citas, especialidades, recetas y uso del sistema.'
-    }
-  ])
-
+function AsistenteIA({ solicitarConfirmacion }) {
+  const [consultas, setConsultas] = useState([])
   const [texto, setTexto] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [cargando, setCargando] = useState(true)
+  const chatBodyRef = useRef(null)
 
-  function responder(pregunta) {
-    const preguntaMinuscula = pregunta.toLowerCase()
+  useEffect(() => {
+    api('/asistente/historial')
+      .then(({ consultas: historial }) => setConsultas(historial))
+      .catch((error) => alert(error.message))
+      .finally(() => setCargando(false))
+  }, [])
 
-    if (preguntaMinuscula.includes('cita')) {
-      return 'Para reservar una cita, ingresa a la sección Reservar cita, selecciona especialidad, médico, fecha y hora.'
+  useEffect(() => {
+    if (!chatBodyRef.current) return
+    chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight
+  }, [consultas, enviando])
+
+  async function enviarPregunta(pregunta) {
+    const preguntaLimpia = pregunta.trim()
+
+    if (!preguntaLimpia || enviando) return
+
+    setEnviando(true)
+    setTexto('')
+
+    try {
+      const datos = await api('/asistente/consultar', {
+        method: 'POST',
+        body: JSON.stringify({ pregunta: preguntaLimpia }),
+      })
+      setConsultas((actuales) => [...actuales, datos.consulta])
+    } catch (error) {
+      alert(error.message)
+      setTexto(preguntaLimpia)
+    } finally {
+      setEnviando(false)
     }
-
-    if (preguntaMinuscula.includes('receta')) {
-      return 'Puedes revisar tus recetas digitales en la sección Historial médico. Recuerda que toda indicación médica debe ser validada por un profesional.'
-    }
-
-    if (preguntaMinuscula.includes('especialidad')) {
-      return 'Las especialidades disponibles son Medicina General, Cardiología, Dermatología y Pediatría.'
-    }
-
-    if (preguntaMinuscula.includes('emergencia') || preguntaMinuscula.includes('dolor fuerte')) {
-      return 'Si tienes una emergencia médica, acude al centro de salud más cercano o comunícate con servicios de emergencia. Este asistente no realiza diagnósticos.'
-    }
-
-    return 'Puedo darte orientación general sobre el uso del sistema. Si tu consulta es clínica, debes reservar una cita con un médico.'
   }
 
   function enviarMensaje(e) {
     e.preventDefault()
+    enviarPregunta(texto)
+  }
 
-    if (!texto.trim()) return
-
-    const respuesta = responder(texto)
-
-    setMensajes([
-      ...mensajes,
-      { tipo: 'usuario', texto },
-      { tipo: 'bot', texto: respuesta }
-    ])
-
-    setTexto('')
+  function limpiarConversacion() {
+    solicitarConfirmacion({
+      titulo: 'Limpiar conversación',
+      mensaje:
+        '¿Deseas eliminar todo el historial del asistente? Esta acción no se puede deshacer.',
+      textoConfirmar: 'Sí, eliminar historial',
+      textoProcesando: 'Eliminando...',
+      accion: async () => {
+        await api('/asistente/historial', { method: 'DELETE' })
+        setConsultas([])
+        alert('Historial de conversación eliminado correctamente.')
+      },
+    })
   }
 
   return (
@@ -648,19 +956,43 @@ function AsistenteIA() {
       <div className="chat-layout">
         <div className="chat-card">
           <div className="chat-header">
-            <strong>MediLink Assistant</strong>
-            <span>Online • Orientación general</span>
+            <div>
+              <strong>MediLink Assistant</strong>
+              <span>En línea • Orientación general</span>
+            </div>
+            {consultas.length > 0 && (
+              <button onClick={limpiarConversacion}>Limpiar conversación</button>
+            )}
           </div>
 
-          <div className="chat-body">
-            {mensajes.map((mensaje, index) => (
-              <div
-                key={index}
-                className={mensaje.tipo === 'bot' ? 'message bot' : 'message user'}
-              >
-                {mensaje.texto}
+          <div className="chat-body" ref={chatBodyRef}>
+            <div className="message bot">
+              Hola, soy el asistente virtual de MediLink. Puedo orientarte sobre
+              citas, especialidades, recetas, resultados y uso del sistema.
+            </div>
+
+            {cargando && (
+              <div className="message bot">Cargando conversación...</div>
+            )}
+
+            {consultas.map((consulta) => (
+              <div className="chat-exchange" key={consulta.id}>
+                <div className="message user">{consulta.pregunta}</div>
+                <div
+                  className={
+                    consulta.intent === 'emergencia'
+                      ? 'message bot urgent-message'
+                      : 'message bot'
+                  }
+                >
+                  {consulta.respuesta}
+                </div>
               </div>
             ))}
+
+            {enviando && (
+              <div className="message bot">Preparando orientación...</div>
+            )}
           </div>
 
           <form className="chat-input" onSubmit={enviarMensaje}>
@@ -668,16 +1000,29 @@ function AsistenteIA() {
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               placeholder="Escribe tu mensaje..."
+              maxLength={500}
+              disabled={enviando}
             />
-            <button type="submit">➤</button>
+            <button type="submit" disabled={enviando || !texto.trim()}>
+              Enviar
+            </button>
           </form>
         </div>
 
         <div className="summary-card">
           <h3>Preguntas rápidas</h3>
-          <button onClick={() => setTexto('¿Cómo reservo una cita?')}>¿Cómo reservo una cita?</button>
-          <button onClick={() => setTexto('¿Qué especialidades hay?')}>¿Qué especialidades hay?</button>
-          <button onClick={() => setTexto('¿Dónde veo mi receta?')}>¿Dónde veo mi receta?</button>
+          <button onClick={() => enviarPregunta('¿Cómo reservo una cita?')}>
+            ¿Cómo reservo una cita?
+          </button>
+          <button onClick={() => enviarPregunta('¿Qué especialidades hay?')}>
+            ¿Qué especialidades hay?
+          </button>
+          <button onClick={() => enviarPregunta('¿Dónde veo mi receta?')}>
+            ¿Dónde veo mi receta?
+          </button>
+          <button onClick={() => enviarPregunta('¿Cómo reprogramo una cita?')}>
+            ¿Cómo reprogramo una cita?
+          </button>
 
           <div className="important-note">
             <h4>Nota importante</h4>
@@ -689,17 +1034,55 @@ function AsistenteIA() {
   )
 }
 
-function Notificaciones({ notificaciones }) {
+function Notificaciones({ notificaciones, marcarLeida, marcarTodas }) {
+  const hayNoLeidas = notificaciones.some((notificacion) => !notificacion.leido)
+
   return (
     <>
       <h1>Notificaciones</h1>
       <p className="subtitle">Recordatorios y avisos del sistema.</p>
 
       <div className="panel">
-        {notificaciones.map((notificacion, index) => (
-          <div className="notification" key={index}>
-            <div className="notification-icon">🔔</div>
-            <p>{notificacion}</p>
+        <div className="notifications-header">
+          <h3>Avisos recientes</h3>
+          {hayNoLeidas && (
+            <button className="secondary-btn" onClick={marcarTodas}>
+              Marcar todas como leídas
+            </button>
+          )}
+        </div>
+
+        {notificaciones.length === 0 && (
+          <p>No tienes notificaciones.</p>
+        )}
+
+        {notificaciones.map((notificacion) => (
+          <div
+            className={
+              notificacion.leido
+                ? 'notification'
+                : 'notification notification-unread'
+            }
+            key={notificacion.id}
+          >
+            <div className={`notification-icon notification-${notificacion.tipo}`}>
+              {notificacion.tipo === 'cita' ? '📅' : '🔔'}
+            </div>
+            <div className="notification-content">
+              <div className="notification-meta">
+                <strong>{etiquetaEstado(notificacion.tipo)}</strong>
+                <span>{formatearFechaHora(notificacion.fechaCreacion)}</span>
+              </div>
+              <p>{notificacion.mensaje}</p>
+            </div>
+            {!notificacion.leido && (
+              <button
+                className="notification-read"
+                onClick={() => marcarLeida(notificacion.id)}
+              >
+                Marcar como leída
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -707,8 +1090,15 @@ function Notificaciones({ notificaciones }) {
   )
 }
 
-function PerfilPaciente({ paciente, setPaciente, setNotificaciones, notificaciones }) {
+function PerfilPaciente({ paciente, actualizarPerfil, cerrarSesion }) {
   const [formulario, setFormulario] = useState(paciente)
+  const [guardando, setGuardando] = useState(false)
+  const [passwords, setPasswords] = useState({
+    actual: '',
+    nueva: '',
+    confirmar: '',
+  })
+  const [cambiandoPassword, setCambiandoPassword] = useState(false)
 
   function actualizarCampo(campo, valor) {
     setFormulario({
@@ -717,17 +1107,46 @@ function PerfilPaciente({ paciente, setPaciente, setNotificaciones, notificacion
     })
   }
 
-  function guardarPerfil(e) {
+  async function guardarPerfil(e) {
+    e.preventDefault()
+    setGuardando(true)
+
+    try {
+      const datos = await actualizarPerfil(formulario)
+      setFormulario(datos.paciente)
+      alert(datos.mensaje)
+    } catch (error) {
+      alert(error.message)
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  async function cambiarPassword(e) {
     e.preventDefault()
 
-    setPaciente(formulario)
+    if (passwords.nueva !== passwords.confirmar) {
+      alert('Las nuevas contraseñas no coinciden.')
+      return
+    }
 
-    setNotificaciones([
-      'Tus datos personales fueron actualizados correctamente.',
-      ...notificaciones
-    ])
+    setCambiandoPassword(true)
 
-    alert('Perfil actualizado correctamente.')
+    try {
+      const datos = await api('/paciente/password', {
+        method: 'PUT',
+        body: JSON.stringify({
+          passwordActual: passwords.actual,
+          nuevaPassword: passwords.nueva,
+        }),
+      })
+      alert(datos.mensaje)
+      cerrarSesion()
+    } catch (error) {
+      alert(error.message)
+    } finally {
+      setCambiandoPassword(false)
+    }
   }
 
   return (
@@ -741,20 +1160,26 @@ function PerfilPaciente({ paciente, setPaciente, setNotificaciones, notificacion
 
           <label>Nombres</label>
           <input
+            className="identity-field"
             value={formulario.nombres}
-            onChange={(e) => actualizarCampo('nombres', e.target.value)}
+            readOnly
+            aria-readonly="true"
           />
 
           <label>Apellidos</label>
           <input
+            className="identity-field"
             value={formulario.apellidos}
-            onChange={(e) => actualizarCampo('apellidos', e.target.value)}
+            readOnly
+            aria-readonly="true"
           />
 
           <label>DNI</label>
           <input
+            className="identity-field"
             value={formulario.dni}
-            onChange={(e) => actualizarCampo('dni', e.target.value)}
+            readOnly
+            aria-readonly="true"
           />
 
           <label>Correo electrónico</label>
@@ -772,9 +1197,11 @@ function PerfilPaciente({ paciente, setPaciente, setNotificaciones, notificacion
 
           <label>Fecha de nacimiento</label>
           <input
+            className="identity-field"
             type="date"
             value={formulario.fechaNacimiento}
-            onChange={(e) => actualizarCampo('fechaNacimiento', e.target.value)}
+            readOnly
+            aria-readonly="true"
           />
 
           <label>Dirección</label>
@@ -783,7 +1210,9 @@ function PerfilPaciente({ paciente, setPaciente, setNotificaciones, notificacion
             onChange={(e) => actualizarCampo('direccion', e.target.value)}
           />
 
-          <button type="submit">Guardar cambios</button>
+          <button type="submit" disabled={guardando}>
+            {guardando ? 'Guardando...' : 'Guardar cambios'}
+          </button>
         </form>
 
         <div className="summary-card">
@@ -799,12 +1228,53 @@ function PerfilPaciente({ paciente, setPaciente, setNotificaciones, notificacion
           <p><strong>Dirección:</strong> {formulario.direccion}</p>
         </div>
       </div>
+
+      <form className="form-card security-card" onSubmit={cambiarPassword}>
+        <h3>Seguridad de la cuenta</h3>
+        <p className="security-hint">
+          Usa al menos 8 caracteres, una mayúscula, una minúscula y un número.
+        </p>
+
+        <label>Contraseña actual</label>
+        <input
+          type="password"
+          value={passwords.actual}
+          onChange={(e) =>
+            setPasswords({ ...passwords, actual: e.target.value })
+          }
+        />
+
+        <label>Nueva contraseña</label>
+        <input
+          type="password"
+          value={passwords.nueva}
+          onChange={(e) =>
+            setPasswords({ ...passwords, nueva: e.target.value })
+          }
+        />
+
+        <label>Confirmar nueva contraseña</label>
+        <input
+          type="password"
+          value={passwords.confirmar}
+          onChange={(e) =>
+            setPasswords({ ...passwords, confirmar: e.target.value })
+          }
+        />
+
+        <button type="submit" disabled={cambiandoPassword}>
+          {cambiandoPassword ? 'Actualizando...' : 'Cambiar contraseña'}
+        </button>
+      </form>
     </>
   )
 }
 
 function LoginRegistro({ iniciarSesion, registrarPaciente }) {
-  const [modo, setModo] = useState('login')
+  const tokenInicial = new URLSearchParams(window.location.search).get('resetToken')
+  const [modo, setModo] = useState(tokenInicial ? 'restablecer' : 'login')
+  const [enviando, setEnviando] = useState(false)
+  const [enlaceDesarrollo, setEnlaceDesarrollo] = useState('')
 
   const [formulario, setFormulario] = useState({
     nombres: '',
@@ -814,7 +1284,8 @@ function LoginRegistro({ iniciarSesion, registrarPaciente }) {
     telefono: '',
     fechaNacimiento: '',
     direccion: '',
-    password: ''
+    password: '',
+    confirmarPassword: '',
   })
 
   function actualizarCampo(campo, valor) {
@@ -824,7 +1295,7 @@ function LoginRegistro({ iniciarSesion, registrarPaciente }) {
     })
   }
 
-  function enviarLogin(e) {
+  async function enviarLogin(e) {
     e.preventDefault()
 
     if (!formulario.correo || !formulario.password) {
@@ -832,10 +1303,12 @@ function LoginRegistro({ iniciarSesion, registrarPaciente }) {
       return
     }
 
-    iniciarSesion(formulario.correo, formulario.password)
+    setEnviando(true)
+    await iniciarSesion(formulario.correo, formulario.password)
+    setEnviando(false)
   }
 
-  function enviarRegistro(e) {
+  async function enviarRegistro(e) {
     e.preventDefault()
 
     if (
@@ -850,23 +1323,91 @@ function LoginRegistro({ iniciarSesion, registrarPaciente }) {
       return
     }
 
-    registrarPaciente(formulario)
+    setEnviando(true)
+    await registrarPaciente(formulario)
+    setEnviando(false)
   }
+
+  async function solicitarRecuperacion(e) {
+    e.preventDefault()
+    setEnviando(true)
+    setEnlaceDesarrollo('')
+
+    try {
+      const datos = await api('/auth/solicitar-recuperacion', {
+        method: 'POST',
+        body: JSON.stringify({ correo: formulario.correo }),
+      })
+      alert(datos.mensaje)
+      setEnlaceDesarrollo(datos.enlaceDesarrollo || '')
+    } catch (error) {
+      alert(error.message)
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  async function restablecerPassword(e) {
+    e.preventDefault()
+
+    if (formulario.password !== formulario.confirmarPassword) {
+      alert('Las contraseñas no coinciden.')
+      return
+    }
+
+    setEnviando(true)
+
+    try {
+      const datos = await api('/auth/restablecer-password', {
+        method: 'POST',
+        body: JSON.stringify({
+          token: tokenInicial,
+          nuevaPassword: formulario.password,
+        }),
+      })
+      alert(datos.mensaje)
+      window.history.replaceState({}, '', window.location.pathname)
+      setFormulario({ ...formulario, password: '', confirmarPassword: '' })
+      setModo('login')
+    } catch (error) {
+      alert(error.message)
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  const titulos = {
+    login: 'Inicio de sesión',
+    registro: 'Registro de paciente',
+    recuperar: 'Recuperar contraseña',
+    restablecer: 'Nueva contraseña',
+  }
+
+  const descripciones = {
+    login: 'Ingresa a tu perfil paciente.',
+    registro: 'Crea tu cuenta para acceder al sistema.',
+    recuperar: 'Ingresa el correo asociado a tu cuenta.',
+    restablecer: 'Crea una contraseña nueva para tu cuenta.',
+  }
+
+  const enviarFormulario =
+    modo === 'login'
+      ? enviarLogin
+      : modo === 'registro'
+        ? enviarRegistro
+        : modo === 'recuperar'
+          ? solicitarRecuperacion
+          : restablecerPassword
 
   return (
     <div className="login-page">
       <div className="login-card">
         <div className="login-logo">〽 MediLink</div>
 
-        <h1>{modo === 'login' ? 'Inicio de sesión' : 'Registro de paciente'}</h1>
+        <h1>{titulos[modo]}</h1>
+        <p>{descripciones[modo]}</p>
 
-        <p>
-          {modo === 'login'
-            ? 'Ingresa a tu perfil paciente.'
-            : 'Crea tu cuenta para acceder al sistema.'}
-        </p>
-
-        <form onSubmit={modo === 'login' ? enviarLogin : enviarRegistro}>
+        <form onSubmit={enviarFormulario}>
           {modo === 'registro' && (
             <>
               <label>Nombres</label>
@@ -908,43 +1449,93 @@ function LoginRegistro({ iniciarSesion, registrarPaciente }) {
             </>
           )}
 
-          <label>Correo electrónico</label>
-          <input
-            type="email"
-            value={formulario.correo}
-            onChange={(e) => actualizarCampo('correo', e.target.value)}
-            placeholder="paciente@medilink.pe"
-          />
+          {modo !== 'restablecer' && (
+            <>
+              <label>Correo electrónico</label>
+              <input
+                type="email"
+                value={formulario.correo}
+                onChange={(e) => actualizarCampo('correo', e.target.value)}
+                placeholder="paciente@medilink.pe"
+              />
+            </>
+          )}
 
-          <label>Contraseña</label>
-          <input
-            type="password"
-            value={formulario.password}
-            onChange={(e) => actualizarCampo('password', e.target.value)}
-            placeholder="123456"
-          />
+          {modo !== 'recuperar' && (
+            <>
+              <label>
+                {modo === 'restablecer' ? 'Nueva contraseña' : 'Contraseña'}
+              </label>
+              <input
+                type="password"
+                value={formulario.password}
+                onChange={(e) => actualizarCampo('password', e.target.value)}
+                placeholder="Ejemplo2026"
+              />
+            </>
+          )}
 
-          <button type="submit">
-            {modo === 'login' ? 'Ingresar' : 'Registrar paciente'}
+          {modo === 'restablecer' && (
+            <>
+              <label>Confirmar nueva contraseña</label>
+              <input
+                type="password"
+                value={formulario.confirmarPassword}
+                onChange={(e) =>
+                  actualizarCampo('confirmarPassword', e.target.value)
+                }
+              />
+            </>
+          )}
+
+          {(modo === 'registro' || modo === 'restablecer') && (
+            <p className="password-help">
+              Mínimo 8 caracteres, mayúscula, minúscula y número.
+            </p>
+          )}
+
+          <button type="submit" disabled={enviando}>
+            {enviando
+              ? 'Procesando...'
+              : modo === 'login'
+                ? 'Ingresar'
+                : modo === 'registro'
+                  ? 'Registrar paciente'
+                  : modo === 'recuperar'
+                    ? 'Generar enlace'
+                    : 'Restablecer contraseña'}
           </button>
         </form>
 
-        <button
-          className="change-mode"
-          onClick={() => setModo(modo === 'login' ? 'registro' : 'login')}
-        >
-          {modo === 'login'
-            ? 'Crear una cuenta nueva'
-            : 'Ya tengo una cuenta'}
-        </button>
+        {enlaceDesarrollo && (
+          <a className="recovery-link" href={enlaceDesarrollo}>
+            Abrir enlace de recuperación
+          </a>
+        )}
 
         {modo === 'login' && (
-          <div className="demo-user">
-            <strong>Usuario de prueba</strong>
-            <span>Correo: paciente@medilink.pe</span>
-            <span>Contraseña: 123456</span>
-          </div>
+          <>
+            <button
+              className="change-mode"
+              onClick={() => setModo('recuperar')}
+            >
+              Olvidé mi contraseña
+            </button>
+            <button
+              className="change-mode"
+              onClick={() => setModo('registro')}
+            >
+              Crear una cuenta nueva
+            </button>
+          </>
         )}
+
+        {modo !== 'login' && (
+          <button className="change-mode" onClick={() => setModo('login')}>
+            Volver al inicio de sesión
+          </button>
+        )}
+
       </div>
     </div>
   )
@@ -954,16 +1545,57 @@ function MisCitas({ citas, cancelarCita, reprogramarCita }) {
   const [citaEditando, setCitaEditando] = useState(null)
   const [nuevaFecha, setNuevaFecha] = useState('')
   const [nuevaHora, setNuevaHora] = useState('')
+  const [horarios, setHorarios] = useState([])
+  const [cargandoHorarios, setCargandoHorarios] = useState(false)
+  const [guardando, setGuardando] = useState(false)
 
   function abrirReprogramacion(cita) {
     setCitaEditando(cita.id)
     setNuevaFecha('')
     setNuevaHora('')
+    setHorarios([])
   }
 
-  function guardarReprogramacion(id) {
-    reprogramarCita(id, nuevaFecha, nuevaHora)
-    setCitaEditando(null)
+  async function buscarHorarios(cita, fecha) {
+    setNuevaFecha(fecha)
+    setNuevaHora('')
+
+    if (!fecha) {
+      setHorarios([])
+      return
+    }
+
+    setCargandoHorarios(true)
+
+    try {
+      const datos = await api(
+        `/citas/horarios?idMedico=${cita.idMedico}&fecha=${fecha}`,
+      )
+      setHorarios(datos.horarios)
+    } catch (error) {
+      alert(error.message)
+    } finally {
+      setCargandoHorarios(false)
+    }
+  }
+
+  async function guardarReprogramacion(id) {
+    if (!nuevaFecha || !nuevaHora) {
+      alert('Selecciona una nueva fecha y hora.')
+      return
+    }
+
+    setGuardando(true)
+
+    try {
+      const datos = await reprogramarCita(id, nuevaFecha, nuevaHora)
+      alert(datos.mensaje)
+      setCitaEditando(null)
+    } catch (error) {
+      alert(error.message)
+    } finally {
+      setGuardando(false)
+    }
   }
 
   return (
@@ -982,18 +1614,19 @@ function MisCitas({ citas, cancelarCita, reprogramarCita }) {
 
         {citas.map((cita) => (
           <div className="appointment cita-completa" key={cita.id}>
-            <div>
+            <div className="cita-info">
               <h4>{cita.medico}</h4>
               <p>{cita.especialidad}</p>
-              <span>{cita.fecha} - {cita.hora}</span>
+              <span>{formatearFecha(cita.fecha)} - {formatearHora(cita.hora)}</span>
+              <p className="cita-motivo"><strong>Motivo:</strong> {cita.motivo}</p>
             </div>
 
             <div className="cita-actions">
-              <span className={cita.estado === 'Cancelada' ? 'estado cancelada' : 'estado'}>
-                {cita.estado}
+              <span className={cita.estado === 'cancelada' ? 'estado cancelada' : 'estado'}>
+                {etiquetaEstado(cita.estado)}
               </span>
 
-              {cita.estado !== 'Cancelada' && (
+              {['pendiente', 'confirmada', 'reprogramada'].includes(cita.estado) && (
                 <>
                   <button
                     className="edit-btn"
@@ -1018,7 +1651,8 @@ function MisCitas({ citas, cancelarCita, reprogramarCita }) {
                 <input
                   type="date"
                   value={nuevaFecha}
-                  onChange={(e) => setNuevaFecha(e.target.value)}
+                  min={fechaActual()}
+                  onChange={(e) => buscarHorarios(cita, e.target.value)}
                 />
 
                 <label>Nueva hora</label>
@@ -1026,15 +1660,23 @@ function MisCitas({ citas, cancelarCita, reprogramarCita }) {
                   value={nuevaHora}
                   onChange={(e) => setNuevaHora(e.target.value)}
                 >
-                  <option value="">Seleccionar hora</option>
-                  <option value="08:00 AM">08:00 AM</option>
-                  <option value="10:00 AM">10:00 AM</option>
-                  <option value="2:30 PM">2:30 PM</option>
-                  <option value="4:00 PM">4:00 PM</option>
+                  <option value="">
+                    {cargandoHorarios
+                      ? 'Consultando horarios...'
+                      : 'Seleccionar hora'}
+                  </option>
+                  {horarios.map((horaDisponible) => (
+                    <option key={horaDisponible} value={horaDisponible}>
+                      {formatearHora(horaDisponible)}
+                    </option>
+                  ))}
                 </select>
 
-                <button onClick={() => guardarReprogramacion(cita.id)}>
-                  Guardar cambio
+                <button
+                  disabled={guardando}
+                  onClick={() => guardarReprogramacion(cita.id)}
+                >
+                  {guardando ? 'Guardando...' : 'Guardar cambio'}
                 </button>
 
                 <button

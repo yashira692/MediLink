@@ -1,0 +1,24 @@
+Fuente principal:
+C:\Users\hp\Downloads\MediLink_Tesis.docx (3).pdf
+
+Datos utilizados:
+- Título: MediLink: Sistema de gestión para clínicas y consultorios médicos con asistente virtual inteligente.
+- Autora: Rojas Alarcón, Yashira Massiel.
+- Asesor: León, Juan.
+- Tipo: proyecto de investigación aplicada / proyecto de fin de carrera.
+- Entorno de referencia: Consultorio Médico Santa Rosa, Santa Anita, Lima.
+- Problema: procesos manuales de citas, acceso limitado al historial y falta de orientación digital.
+- Objetivo: centralizar la atención mediante una aplicación web.
+- Metodología: Scrum, seis sprints.
+- Planificación: 12 semanas.
+- Tecnologías: React, Node.js/Express, MySQL, Dialogflow y Figma.
+
+Fuentes visuales:
+- Capturas reales proporcionadas por la autora desde localhost.
+- ERD: C:\Users\hp\Downloads\erd_medilink.html
+
+Ajustes de alcance:
+- La videollamada no forma parte del alcance final y se excluye de la presentación.
+- La demostración funcional se concentra en el perfil paciente.
+- Los perfiles médico y administrador se muestran como evolución prevista.
+- No se incluye rentabilidad porque no se presenta como startup.

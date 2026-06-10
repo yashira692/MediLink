@@ -1,0 +1,24 @@
+task mode: create
+primary deck-profile: product-platform
+secondary profile gates: engineering-platform, appendix-heavy
+required proof objects:
+- problema y alcance real
+- recorrido funcional del paciente
+- arquitectura de tres capas
+- cronograma Gantt de 12 semanas
+- capturas reales de la aplicación
+- anexos técnicos: Ishikawa, DER, casos de uso y proceso
+source/asset requirements:
+- tesis MediLink, capítulos I al III
+- ERD proporcionado por la autora
+- capturas reales de localhost
+brand authenticity constraints:
+- usar la identidad visual azul existente de MediLink
+- no inventar logotipos de instituciones o clínicas
+profile-specific QA gates:
+- diagramas legibles y editables
+- arquitectura con tecnologías concretas
+- DEMO vinculada a los requerimientos
+- sin videollamada, por estar fuera del alcance final
+known missing inputs:
+- fecha exacta de exposición

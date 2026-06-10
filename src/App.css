@@ -29,7 +29,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font-family: inherit;
 }
 
@@ -39,6 +40,20 @@ button {
 
 button:hover {
   transform: translateY(-1px);
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+  transform: none;
+}
+
+.session-loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  color: var(--primary);
+  font-weight: 700;
 }
 
 /* ===== LAYOUT GENERAL ===== */
@@ -335,16 +350,33 @@ button:hover {
 }
 
 .cita-completa {
-  align-items: flex-start;
+  align-items: center;
   flex-direction: column;
+  text-align: center;
+}
+
+.cita-info {
+  width: 100%;
+}
+
+.cita-motivo {
+  margin: 12px auto 0;
+  max-width: 680px;
+  overflow-wrap: anywhere;
 }
 
 .cita-actions {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   margin-top: 14px;
   flex-wrap: wrap;
+  width: 100%;
+}
+
+.cita-actions .cancel-btn {
+  margin-left: 0;
 }
 
 .reprogramar-box {
@@ -354,6 +386,7 @@ button:hover {
   border-radius: 18px;
   padding: 18px;
   margin-top: 16px;
+  text-align: left;
 }
 
 .reprogramar-box label {
@@ -381,6 +414,107 @@ button:hover {
   font-weight: bold;
   margin-top: 14px;
   margin-right: 10px;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(14, 42, 70, 0.45);
+  backdrop-filter: blur(3px);
+}
+
+.confirm-modal {
+  width: min(430px, 100%);
+  padding: 30px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: #ffffff;
+  text-align: center;
+  box-shadow: 0 24px 70px rgba(17, 54, 88, 0.25);
+}
+
+.confirm-icon {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: #ffe7e8;
+  color: #c92b35;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.confirm-modal h3 {
+  margin: 0 0 10px;
+  font-size: 23px;
+}
+
+.confirm-modal p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.confirm-actions button {
+  min-width: 145px;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 13px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.confirm-actions button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.modal-secondary-btn {
+  background: var(--primary-soft);
+  color: var(--text);
+}
+
+.modal-danger-btn {
+  background: #d83a44;
+  color: #ffffff;
+}
+
+.app-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 1100;
+  max-width: min(380px, calc(100vw - 40px));
+  padding: 14px 18px;
+  border-radius: 14px;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 14px 35px rgba(17, 54, 88, 0.22);
+}
+
+.app-toast.exito {
+  background: #18865b;
+}
+
+.app-toast.error {
+  background: #c92b35;
+}
+
+.app-toast.info {
+  background: var(--primary-dark);
 }
 
 .secondary-btn {
@@ -414,6 +548,7 @@ button:hover {
 
 .form-card input,
 .form-card select,
+.form-card textarea,
 .login-card input,
 .chat-input input {
   width: 100%;
@@ -425,14 +560,26 @@ button:hover {
   background: white;
 }
 
+.form-card textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
 .form-card input:focus,
 .form-card select:focus,
+.form-card textarea:focus,
 .login-card input:focus,
 .chat-input input:focus,
 .reprogramar-box input:focus,
 .reprogramar-box select:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 4px rgba(47, 127, 193, 0.12);
+}
+
+.form-help {
+  margin-top: 10px;
+  color: var(--danger);
+  font-size: 14px;
 }
 
 .form-card button,
@@ -491,6 +638,14 @@ button:hover {
   margin: 0 0 6px;
 }
 
+.medicine-item {
+  margin-top: 14px;
+  padding: 14px;
+  background: #f7fbff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
 .history-item .secondary {
   background: var(--primary-soft);
   color: var(--text);
@@ -514,14 +669,31 @@ button:hover {
   padding: 20px;
   border-bottom: 1px solid var(--border);
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #ffffff, #f5fbff);
+}
+
+.chat-header div {
+  display: flex;
   flex-direction: column;
   gap: 4px;
-  background: linear-gradient(135deg, #ffffff, #f5fbff);
 }
 
 .chat-header span {
   color: var(--muted);
   font-size: 14px;
+}
+
+.chat-header button {
+  border: none;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  padding: 9px 12px;
+  border-radius: 11px;
+  cursor: pointer;
+  font-weight: 700;
 }
 
 .chat-body {
@@ -531,6 +703,10 @@ button:hover {
   background: #fbfdff;
 }
 
+.chat-exchange {
+  display: contents;
+}
+
 .message {
   max-width: 78%;
   padding: 13px 16px;
@@ -538,6 +714,12 @@ button:hover {
   border-radius: 16px;
   line-height: 1.45;
   font-size: 15px;
+}
+
+.urgent-message {
+  background: var(--danger-bg) !important;
+  color: var(--danger) !important;
+  border: 1px solid #ffc9c9;
 }
 
 .message.bot {
@@ -563,9 +745,8 @@ button:hover {
 
 .chat-input button {
   margin-top: 0;
-  width: 55px;
-  min-width: 55px;
-  padding: 0;
+  min-width: 80px;
+  padding: 0 14px;
 }
 
 .summary-card button {
@@ -603,6 +784,11 @@ button:hover {
   background: white;
 }
 
+.notification-unread {
+  border-color: #9bc9ef;
+  background: #f4faff;
+}
+
 .notification-icon {
   width: 44px;
   height: 44px;
@@ -610,6 +796,51 @@ button:hover {
   border-radius: 50%;
   display: grid;
   place-items: center;
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-meta,
+.notifications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+
+.notification-meta {
+  margin-bottom: 5px;
+}
+
+.notification-meta span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.notifications-header h3 {
+  margin: 0;
+}
+
+.notifications-header .secondary-btn,
+.notification-read {
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 10px 13px;
+}
+
+.notifications-header .secondary-btn {
+  margin: 0;
+}
+
+.notification-read {
+  color: var(--primary-dark);
+  background: var(--primary-soft);
+  white-space: nowrap;
 }
 
 /* ===== PERFIL ===== */
@@ -626,6 +857,30 @@ button:hover {
   font-weight: bold;
   margin: 20px auto;
   box-shadow: 0 10px 24px rgba(47, 127, 193, 0.26);
+}
+
+.security-card {
+  max-width: 760px;
+  margin-top: 24px;
+}
+
+.security-hint,
+.password-help {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.form-card .identity-field {
+  border-color: #d8e1e9;
+  background: #eef3f7;
+  color: #607183;
+  cursor: not-allowed;
+}
+
+.form-card .identity-field:focus {
+  border-color: #d8e1e9;
+  box-shadow: none;
 }
 
 /* ===== LOGIN ===== */
@@ -679,6 +934,18 @@ button:hover {
   box-shadow: none !important;
 }
 
+.recovery-link {
+  display: block;
+  margin-top: 18px;
+  padding: 13px;
+  border-radius: 13px;
+  background: var(--success-bg);
+  color: var(--success);
+  text-align: center;
+  text-decoration: none;
+  font-weight: 700;
+}
+
 .demo-user {
   margin-top: 20px;
   background: #f7fbff;
@@ -728,6 +995,30 @@ button:hover {
     align-items: flex-start;
     flex-direction: column;
     gap: 14px;
+  }
+
+  .appointment.cita-completa {
+    align-items: center;
+  }
+
+  .confirm-modal {
+    padding: 24px 20px;
+  }
+
+  .confirm-actions {
+    flex-direction: column-reverse;
+  }
+
+  .confirm-actions button {
+    width: 100%;
+  }
+
+  .app-toast {
+    top: 16px;
+    right: 20px;
+    left: 20px;
+    max-width: none;
+    text-align: center;
   }
 
   .tabs {
@@ -788,4 +1079,3 @@ button:hover {
 .user-dropdown .dropdown-logout:hover {
   background: var(--danger-bg);
 }
-
