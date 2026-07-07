@@ -215,6 +215,25 @@ try {
     )
   }
 
+  await connection.query(
+    `CREATE TABLE IF NOT EXISTS notificacion_envios (
+      id_envio INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      id_notificacion INT UNSIGNED NOT NULL,
+      canal ENUM('correo', 'whatsapp') NOT NULL,
+      destino VARCHAR(190) NOT NULL,
+      asunto VARCHAR(190) NULL,
+      mensaje TEXT NOT NULL,
+      enlace VARCHAR(700) NULL,
+      estado ENUM('preparado', 'enviado', 'fallido') NOT NULL DEFAULT 'preparado',
+      fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      fecha_envio TIMESTAMP NULL,
+      error_envio VARCHAR(500) NULL,
+      CONSTRAINT fk_envios_notificacion
+        FOREIGN KEY (id_notificacion) REFERENCES notificaciones(id_notificacion)
+        ON DELETE CASCADE
+    )`,
+  )
+
   for (const [nombre, descripcion] of especialidades) {
     await connection.execute(
       `INSERT INTO especialidades (nombre, descripcion, estado)

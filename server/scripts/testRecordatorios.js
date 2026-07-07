@@ -50,8 +50,8 @@ try {
   )
   const [[momento]] = await db.execute(
     `SELECT
-      DATE_FORMAT(DATE_ADD(NOW(), INTERVAL 2 HOUR), '%Y-%m-%d') AS fecha,
-      DATE_FORMAT(DATE_ADD(NOW(), INTERVAL 2 HOUR), '%H:%i:00') AS hora`,
+      DATE_FORMAT(DATE_ADD(NOW(), INTERVAL 20 MINUTE), '%Y-%m-%d') AS fecha,
+      DATE_FORMAT(DATE_ADD(NOW(), INTERVAL 20 MINUTE), '%H:%i:00') AS hora`,
   )
   const [cita] = await db.execute(
     `INSERT INTO citas
@@ -72,7 +72,7 @@ try {
   const [recordatorios] = await db.execute(
     `SELECT id_notificacion
      FROM notificaciones
-     WHERE id_cita = ? AND clave_evento LIKE 'recordatorio-24h:%'`,
+     WHERE id_cita = ? AND clave_evento LIKE 'recordatorio-cita:%'`,
     [idCita],
   )
 
@@ -90,7 +90,7 @@ try {
   const [recordatoriosRestantes] = await db.execute(
     `SELECT id_notificacion
      FROM notificaciones
-     WHERE id_cita = ? AND clave_evento LIKE 'recordatorio-24h:%'`,
+     WHERE id_cita = ? AND clave_evento LIKE 'recordatorio-cita:%'`,
     [idCita],
   )
 

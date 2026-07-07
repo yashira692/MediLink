@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import crypto from 'node:crypto'
 import jwt from 'jsonwebtoken'
 import pool from '../config/db.js'
+import { crearNotificacionConCanales } from '../services/canalesNotificacion.js'
 
 const router = Router()
 const intentosLogin = new Map()
@@ -143,11 +144,14 @@ router.post('/registro', async (req, res, next) => {
        VALUES (?, ?, ?)`,
       [usuarioResult.insertId, fechaNacimiento, direccion],
     )
-    await connection.execute(
-      `INSERT INTO notificaciones (id_paciente, tipo, mensaje)
-       VALUES (?, 'sistema', 'Bienvenido a MediLink. Tu cuenta fue creada correctamente.')`,
-      [pacienteResult.insertId],
-    )
+    await crearNotificacionConCanales(connection, {
+      idPaciente: pacienteResult.insertId,
+      tipo: 'sistema',
+      mensaje: 'Bienvenido a MediLink. Tu cuenta fue creada correctamente.',
+      correo,
+      telefono,
+      asunto: 'Bienvenida a MediLink',
+    })
 
     await connection.commit()
 

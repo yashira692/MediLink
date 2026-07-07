@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import pool from '../config/db.js'
 import { autenticar, soloPacientes } from '../middleware/auth.js'
+import { crearNotificacionConCanales } from '../services/canalesNotificacion.js'
 
 const router = Router()
 const ESTADOS_ACTIVOS = ['pendiente', 'confirmada', 'reprogramada']
@@ -58,6 +59,19 @@ async function obtenerDisponibilidad(connection, idMedico, fecha) {
   }
 
   return horarios
+}
+
+async function obtenerContactoPaciente(connection, idPaciente) {
+  const [[paciente]] = await connection.execute(
+    `SELECT u.nombres, u.apellidos, u.correo, u.telefono
+     FROM pacientes p
+     INNER JOIN usuarios u ON u.id_usuario = p.id_usuario
+     WHERE p.id_paciente = ?
+     LIMIT 1`,
+    [idPaciente],
+  )
+
+  return paciente
 }
 
 router.get('/catalogo', async (_req, res, next) => {
@@ -160,14 +174,17 @@ router.post('/', async (req, res, next) => {
        VALUES (?, ?, ?, ?, ?)`,
       [req.usuario.idPaciente, idMedico, fecha, hora, motivo],
     )
-    await connection.execute(
-      `INSERT INTO notificaciones (id_paciente, tipo, mensaje)
-       VALUES (?, 'cita', ?)`,
-      [
-        req.usuario.idPaciente,
-        `Tu solicitud de cita para el ${fecha} a las ${hora} fue registrada.`,
-      ],
-    )
+    const paciente = await obtenerContactoPaciente(connection, req.usuario.idPaciente)
+    const mensaje = `Tu solicitud de cita para el ${fecha} a las ${hora} fue registrada.`
+    await crearNotificacionConCanales(connection, {
+      idPaciente: req.usuario.idPaciente,
+      idCita: resultado.insertId,
+      tipo: 'cita',
+      mensaje,
+      correo: paciente?.correo,
+      telefono: paciente?.telefono,
+      asunto: 'Cita registrada en MediLink',
+    })
     await connection.commit()
 
     return res.status(201).json({
@@ -207,14 +224,19 @@ router.patch('/:id/cancelar', async (req, res, next) => {
 
     await connection.execute(
       `DELETE FROM notificaciones
-       WHERE id_cita = ? AND clave_evento LIKE 'recordatorio-24h:%'`,
+       WHERE id_cita = ? AND clave_evento LIKE 'recordatorio-cita:%'`,
       [idCita],
     )
-    await connection.execute(
-      `INSERT INTO notificaciones (id_paciente, tipo, mensaje)
-       VALUES (?, 'cita', 'Tu cita fue cancelada correctamente.')`,
-      [req.usuario.idPaciente],
-    )
+    const paciente = await obtenerContactoPaciente(connection, req.usuario.idPaciente)
+    await crearNotificacionConCanales(connection, {
+      idPaciente: req.usuario.idPaciente,
+      idCita,
+      tipo: 'cita',
+      mensaje: 'Tu cita fue cancelada correctamente.',
+      correo: paciente?.correo,
+      telefono: paciente?.telefono,
+      asunto: 'Cita cancelada en MediLink',
+    })
     await connection.commit()
 
     return res.json({ mensaje: 'Cita cancelada correctamente.' })
@@ -267,7 +289,7 @@ router.put('/:id/reprogramar', async (req, res, next) => {
 
     await connection.execute(
       `DELETE FROM notificaciones
-       WHERE id_cita = ? AND clave_evento LIKE 'recordatorio-24h:%'`,
+       WHERE id_cita = ? AND clave_evento LIKE 'recordatorio-cita:%'`,
       [idCita],
     )
     await connection.execute(
@@ -276,14 +298,17 @@ router.put('/:id/reprogramar', async (req, res, next) => {
        WHERE id_cita = ?`,
       [fecha, hora, idCita],
     )
-    await connection.execute(
-      `INSERT INTO notificaciones (id_paciente, tipo, mensaje)
-       VALUES (?, 'cita', ?)`,
-      [
-        req.usuario.idPaciente,
-        `Tu cita fue reprogramada para el ${fecha} a las ${hora}.`,
-      ],
-    )
+    const paciente = await obtenerContactoPaciente(connection, req.usuario.idPaciente)
+    const mensaje = `Tu cita fue reprogramada para el ${fecha} a las ${hora}.`
+    await crearNotificacionConCanales(connection, {
+      idPaciente: req.usuario.idPaciente,
+      idCita,
+      tipo: 'cita',
+      mensaje,
+      correo: paciente?.correo,
+      telefono: paciente?.telefono,
+      asunto: 'Cita reprogramada en MediLink',
+    })
     await connection.commit()
 
     return res.json({ mensaje: 'Cita reprogramada correctamente.' })

@@ -42,6 +42,17 @@ function formatearFechaHora(fecha) {
   }).format(new Date(fecha))
 }
 
+function etiquetaCanal(canal) {
+  return canal === 'whatsapp' ? 'WhatsApp' : 'Correo'
+}
+
+function etiquetaEnvio(estado) {
+  if (estado === 'enviado') return 'enviado'
+  if (estado === 'fallido') return 'no enviado'
+
+  return 'preparado'
+}
+
 function App() {
   const [vista, setVista] = useState('dashboard')
   const [menuUsuario, setMenuUsuario] = useState(false)
@@ -1074,6 +1085,23 @@ function Notificaciones({ notificaciones, marcarLeida, marcarTodas }) {
                 <span>{formatearFechaHora(notificacion.fechaCreacion)}</span>
               </div>
               <p>{notificacion.mensaje}</p>
+              {notificacion.canales?.length > 0 && (
+                <div className="notification-channels">
+                  {notificacion.canales.map((canal) => (
+                    <span
+                      className={`channel-btn channel-${canal.canal}`}
+                      key={`${notificacion.id}-${canal.canal}`}
+                      title={
+                        canal.estado === 'preparado'
+                          ? 'Pendiente de configurar proveedor real'
+                          : undefined
+                      }
+                    >
+                      {etiquetaCanal(canal.canal)} {etiquetaEnvio(canal.estado)}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             {!notificacion.leido && (
               <button

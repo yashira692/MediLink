@@ -843,6 +843,31 @@ button:disabled {
   white-space: nowrap;
 }
 
+.notification-channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.channel-btn {
+  border-radius: 999px;
+  color: white;
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 7px 12px;
+  text-decoration: none;
+}
+
+.channel-correo {
+  background: #2f7fc1;
+}
+
+.channel-whatsapp {
+  background: #128c7e;
+}
+
 /* ===== PERFIL ===== */
 
 .profile-avatar {

@@ -38,6 +38,37 @@ router.get('/', async (req, res, next) => {
        ORDER BY fecha_creacion DESC, id_notificacion DESC`,
       [req.usuario.idPaciente],
     )
+    const ids = notificaciones.map((notificacion) => notificacion.id)
+
+    if (ids.length > 0) {
+      const marcadores = ids.map(() => '?').join(', ')
+      const [envios] = await pool.execute(
+        `SELECT
+          id_notificacion AS idNotificacion,
+          canal,
+          destino,
+          estado,
+          enlace,
+          DATE_FORMAT(fecha_creacion, '%Y-%m-%dT%H:%i:%s') AS fechaCreacion,
+          DATE_FORMAT(fecha_envio, '%Y-%m-%dT%H:%i:%s') AS fechaEnvio
+         FROM notificacion_envios
+         WHERE id_notificacion IN (${marcadores})
+         ORDER BY id_envio ASC`,
+        ids,
+      )
+
+      const enviosPorNotificacion = envios.reduce((mapa, envio) => {
+        const actuales = mapa.get(envio.idNotificacion) || []
+        actuales.push(envio)
+        mapa.set(envio.idNotificacion, actuales)
+        return mapa
+      }, new Map())
+
+      for (const notificacion of notificaciones) {
+        notificacion.canales = enviosPorNotificacion.get(notificacion.id) || []
+      }
+    }
+
     const noLeidas = notificaciones.filter(
       (notificacion) => !notificacion.leido,
     ).length
