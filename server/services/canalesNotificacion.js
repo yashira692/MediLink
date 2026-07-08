@@ -38,11 +38,19 @@ function crearEnlaceWhatsApp(telefono, mensaje) {
     : null
 }
 
+function proveedorWhatsApp() {
+  return (process.env.WHATSAPP_PROVIDER || 'meta').toLowerCase()
+}
+
 function whatsappConfigurado() {
   return Boolean(
     process.env.WHATSAPP_ACCESS_TOKEN &&
       process.env.WHATSAPP_PHONE_NUMBER_ID,
   )
+}
+
+function callMeBotConfigurado() {
+  return Boolean(process.env.CALLMEBOT_API_KEY)
 }
 
 function correoConfigurado() {
@@ -91,6 +99,10 @@ async function enviarCorreo(destino, asunto, mensaje) {
 }
 
 async function enviarWhatsApp(destino, mensaje) {
+  if (proveedorWhatsApp() === 'callmebot') {
+    return enviarWhatsAppCallMeBot(destino, mensaje)
+  }
+
   if (!whatsappConfigurado()) {
     return {
       estado: 'preparado',
@@ -121,6 +133,32 @@ async function enviarWhatsApp(destino, mensaje) {
   if (!respuesta.ok) {
     const detalle = await respuesta.text()
     throw new Error(detalle.slice(0, 450))
+  }
+
+  return { estado: 'enviado', error: null }
+}
+
+async function enviarWhatsAppCallMeBot(destino, mensaje) {
+  if (!callMeBotConfigurado()) {
+    return {
+      estado: 'preparado',
+      error: 'CallMeBot no configurado en .env',
+    }
+  }
+
+  const telefono = destino.startsWith('+') ? destino : `+${destino}`
+  const parametros = new URLSearchParams({
+    phone: telefono,
+    text: mensaje,
+    apikey: process.env.CALLMEBOT_API_KEY,
+  })
+  const respuesta = await fetch(
+    `https://api.callmebot.com/whatsapp.php?${parametros.toString()}`,
+  )
+  const texto = await respuesta.text()
+
+  if (!respuesta.ok || /error/i.test(texto)) {
+    throw new Error(texto.slice(0, 450) || 'CallMeBot rechazo el mensaje')
   }
 
   return { estado: 'enviado', error: null }
