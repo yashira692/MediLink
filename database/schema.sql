@@ -78,7 +78,8 @@ CREATE TABLE IF NOT EXISTS citas (
     'reprogramada',
     'cancelada',
     'completada',
-    'rechazada'
+    'rechazada',
+    'vencida'
   ) NOT NULL DEFAULT 'pendiente',
   motivo_cancelacion VARCHAR(500) NULL,
   fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

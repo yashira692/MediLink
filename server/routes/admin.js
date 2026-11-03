@@ -3,6 +3,7 @@ import { Router } from 'express'
 import pool from '../config/db.js'
 import { autenticar, soloAdministradores } from '../middleware/auth.js'
 import { registrarAcceso } from '../services/bitacora.js'
+import { cambiarPassword } from '../services/cuenta.js'
 import { enviarReporteExcel, enviarReportePdf } from '../utils/reportes.js'
 import { fechaValida, passwordSegura } from '../utils/validacion.js'
 
@@ -110,6 +111,7 @@ async function obtenerReporte({ desde, hasta, idMedico, idEspecialidad }) {
       atendidas: contar(['completada']),
       canceladas: contar(['cancelada', 'rechazada']),
       activas: contar(['pendiente', 'confirmada', 'reprogramada']),
+      vencidas: contar(['vencida']),
     },
   }
 }
@@ -133,6 +135,12 @@ router.get('/perfil', async (req, res, next) => {
   }
 })
 
+router.put('/password', (req, res, next) =>
+  cambiarPassword(req, res, next, () =>
+    registrarAcceso(pool, req, { accion: 'cambiar_password' }),
+  ),
+)
+
 router.get('/dashboard', async (req, res, next) => {
   try {
     const [[{ mesActual }]] = await pool.execute(
@@ -150,7 +158,8 @@ router.get('/dashboard', async (req, res, next) => {
         COUNT(*) AS citas,
         COALESCE(SUM(estado = 'completada'), 0) AS atendidas,
         COALESCE(SUM(estado IN ('cancelada', 'rechazada')), 0) AS canceladas,
-        COALESCE(SUM(estado IN ('pendiente', 'confirmada', 'reprogramada')), 0) AS activas
+        COALESCE(SUM(estado IN ('pendiente', 'confirmada', 'reprogramada')), 0) AS activas,
+        COALESCE(SUM(estado = 'vencida'), 0) AS vencidas
        FROM citas
        WHERE fecha BETWEEN ? AND LAST_DAY(?)`,
       [inicio, inicio],
@@ -188,6 +197,7 @@ router.get('/dashboard', async (req, res, next) => {
       atendidas: Number(totales.atendidas),
       canceladas: Number(totales.canceladas),
       activas: Number(totales.activas),
+      vencidas: Number(totales.vencidas),
       pacientes: Number(pacientes),
       medicos: Number(medicos),
       especialidades: especialidades.map((item) => ({

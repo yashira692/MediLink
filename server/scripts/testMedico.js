@@ -3,6 +3,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import mysql from 'mysql2/promise'
+import pool from '../config/db.js'
+import { marcarCitasVencidas } from '../services/citasVencidas.js'
 
 const apiUrl = `http://localhost:${process.env.PORT || 3001}/api`
 const correo = `medico.prueba.${Date.now()}@medilink.test`
@@ -416,6 +418,31 @@ try {
     'El paciente no recibió el aviso del documento.',
   )
 
+  // Citas vencidas
+  const [citaPasada] = await db.execute(
+    `INSERT INTO citas (id_paciente, id_medico, fecha, hora, motivo, estado)
+     VALUES (?, ?, DATE_SUB(CURDATE(), INTERVAL 3 DAY), '23:00:00', 'Cita pasada', 'pendiente')`,
+    [idPaciente, idMedico],
+  )
+  await marcarCitasVencidas()
+  const [[pasada]] = await db.execute('SELECT estado FROM citas WHERE id_cita = ?', [
+    citaPasada.insertId,
+  ])
+  const [[citaHoyActual]] = await db.execute('SELECT estado FROM citas WHERE id_cita = ?', [
+    citaHoy.insertId,
+  ])
+  comprobar(pasada.estado === 'vencida', 'La cita pasada no quedó vencida.')
+  comprobar(citaHoyActual.estado === 'completada', 'Se cambió el estado de una cita atendida.')
+  comprobar(
+    (await solicitud(`/medico/citas/${citaPasada.insertId}/aprobar`, tokenMedico, { method: 'PATCH' }))
+      .status === 404,
+    'Se aprobó una cita vencida.',
+  )
+  await exito(`/medico/citas/${citaPasada.insertId}/consulta`, tokenMedico, {
+    method: 'POST',
+    body: JSON.stringify({ diagnostico: 'Consulta registrada tarde' }),
+  })
+
   const [registrosBitacora] = await db.execute(
     `SELECT accion, usuario FROM bitacora_accesos
      WHERE id_bitacora > ? AND id_paciente = ?`,
@@ -466,4 +493,5 @@ try {
     await db.execute('DELETE FROM usuarios WHERE id_usuario = ?', [idUsuario])
   }
   await db.end()
+  await pool.end()
 }

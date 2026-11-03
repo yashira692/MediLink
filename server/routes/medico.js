@@ -7,6 +7,7 @@ import pool from '../config/db.js'
 import { autenticar, soloMedicos } from '../middleware/auth.js'
 import { registrarAcceso } from '../services/bitacora.js'
 import { crearNotificacionConCanales } from '../services/canalesNotificacion.js'
+import { cambiarPassword } from '../services/cuenta.js'
 import {
   fechaHoraFutura,
   obtenerDisponibilidad,
@@ -193,6 +194,12 @@ router.get('/perfil', async (req, res, next) => {
     return next(error)
   }
 })
+
+router.put('/password', (req, res, next) =>
+  cambiarPassword(req, res, next, () =>
+    registrarAcceso(pool, req, { accion: 'cambiar_password' }),
+  ),
+)
 
 router.get('/citas', async (req, res, next) => {
   const { desde, hasta } = req.query
@@ -460,10 +467,10 @@ router.post('/citas/:id/consulta', async (req, res, next) => {
       return res.status(404).json({ mensaje: 'Cita no encontrada.' })
     }
 
-    if (!['confirmada', 'reprogramada'].includes(cita.estado)) {
+    if (!['confirmada', 'reprogramada', 'vencida'].includes(cita.estado)) {
       await connection.rollback()
       return res.status(409).json({
-        mensaje: 'Solo se puede atender una cita confirmada o reprogramada.',
+        mensaje: 'Solo se puede atender una cita confirmada, reprogramada o vencida.',
       })
     }
 

@@ -30,6 +30,7 @@ function descripcionResumen(resumen) {
     `Atendidas: ${resumen.atendidas}`,
     `Canceladas: ${resumen.canceladas}`,
     `Activas: ${resumen.activas}`,
+    `Vencidas: ${resumen.vencidas}`,
   ].join('   |   ')
 }
 

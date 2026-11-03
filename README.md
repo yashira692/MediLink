@@ -79,6 +79,12 @@ desarrollo y no deben usarse en producción.
 
 Con la API iniciada, `node server/scripts/testMedico.js` prueba este perfil.
 
+## Citas vencidas
+
+Al iniciar el servidor y cada 15 minutos, las citas pendientes, confirmadas o
+reprogramadas de días anteriores pasan a `vencida`. Ya no ocupan `Por atender`,
+y el médico aún puede registrar la consulta si la atención ocurrió.
+
 ## Panel de administrador
 
 El administrador usa la misma pantalla de inicio de sesión. Desde su panel puede:

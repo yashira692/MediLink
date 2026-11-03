@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import CambiarPassword from './CambiarPassword.jsx'
 import HistorialMedico from './HistorialMedico.jsx'
 import { api } from './services/api.js'
 import {
@@ -76,6 +77,15 @@ function PanelMedico({ medico, cerrarSesion, solicitarConfirmacion }) {
 
               {menuUsuario && (
                 <div className="user-dropdown">
+                  <button
+                    onClick={() => {
+                      irA('password')
+                      setMenuUsuario(false)
+                    }}
+                  >
+                    Cambiar contraseña
+                  </button>
+
                   <button className="dropdown-logout" onClick={cerrarSesion}>
                     Cerrar sesión
                   </button>
@@ -99,6 +109,10 @@ function PanelMedico({ medico, cerrarSesion, solicitarConfirmacion }) {
               cita={citaEnConsulta}
               volver={() => setCitaEnConsulta(null)}
             />
+          )}
+
+          {vista === 'password' && (
+            <CambiarPassword ruta="/medico/password" cerrarSesion={cerrarSesion} />
           )}
 
           {vista === 'pacientes' && !pacienteVisto && (
@@ -290,7 +304,8 @@ function CitaAgenda({
   const activa = ESTADOS_ACTIVOS.includes(cita.estado)
   const puedeAprobar = ['pendiente', 'reprogramada'].includes(cita.estado)
   const puedeAtender =
-    ['confirmada', 'reprogramada'].includes(cita.estado) && cita.fecha <= hoy
+    ['confirmada', 'reprogramada', 'vencida'].includes(cita.estado) &&
+    cita.fecha <= hoy
 
   return (
     <div className="appointment cita-completa">
@@ -306,7 +321,7 @@ function CitaAgenda({
       </div>
 
       <div className="cita-actions">
-        <span className={cita.estado === 'cancelada' ? 'estado cancelada' : 'estado'}>
+        <span className={['cancelada', 'vencida'].includes(cita.estado) ? 'estado cancelada' : 'estado'}>
           {etiquetaEstado(cita.estado)}
         </span>
 

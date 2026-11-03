@@ -328,6 +328,49 @@ try {
     enviar('POST', { correo: correoMedico, password: passwordMedico }),
   )
 
+  // Cambio de contraseña
+  comprobar(typeof despues.vencidas === 'number', 'El dashboard no incluye las vencidas.')
+  comprobar(
+    (await solicitud('/admin/password', tokenPaciente, enviar('PUT', {}))).status === 403,
+    'Un paciente usó la ruta de contraseña del administrador.',
+  )
+  comprobar(
+    (await solicitud(
+      '/admin/password',
+      token,
+      enviar('PUT', { passwordActual: 'Incorrecta2026', nuevaPassword: 'OtraClave2026' }),
+    )).status === 401,
+    'El administrador cambió su contraseña sin conocer la actual.',
+  )
+
+  const sesionFinal = await exito(
+    '/auth/login',
+    null,
+    enviar('POST', { correo: correoMedico, password: passwordMedico }),
+  )
+  comprobar(
+    (await solicitud(
+      '/medico/password',
+      sesionFinal.token,
+      enviar('PUT', { passwordActual: passwordMedico, nuevaPassword: 'debil' }),
+    )).status === 400,
+    'Se aceptó una contraseña débil al cambiarla.',
+  )
+  await exito(
+    '/medico/password',
+    sesionFinal.token,
+    enviar('PUT', { passwordActual: passwordMedico, nuevaPassword: 'MedicoNueva2026' }),
+  )
+  comprobar(
+    (await solicitud('/medico/perfil', sesionFinal.token)).status === 401,
+    'La sesión anterior sigue activa tras cambiar la contraseña.',
+  )
+  await exito(
+    '/auth/login',
+    null,
+    enviar('POST', { correo: correoMedico, password: 'MedicoNueva2026' }),
+  )
+
   console.log(
     'Login, permisos, médicos, especialidades, dashboard, reportes y exportación del administrador: correctos.',
   )

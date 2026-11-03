@@ -1542,7 +1542,7 @@ function MisCitas({ citas, cancelarCita, reprogramarCita }) {
             </div>
 
             <div className="cita-actions">
-              <span className={cita.estado === 'cancelada' ? 'estado cancelada' : 'estado'}>
+              <span className={['cancelada', 'vencida'].includes(cita.estado) ? 'estado cancelada' : 'estado'}>
                 {etiquetaEstado(cita.estado)}
               </span>
 

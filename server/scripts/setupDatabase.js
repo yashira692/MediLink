@@ -234,6 +234,13 @@ try {
     )`,
   )
 
+  await connection.query(
+    `ALTER TABLE citas MODIFY COLUMN estado ENUM(
+      'pendiente', 'confirmada', 'reprogramada', 'cancelada', 'completada',
+      'rechazada', 'vencida'
+    ) NOT NULL DEFAULT 'pendiente'`,
+  )
+
   const [columnasConsentimiento] = await connection.execute(
     `SELECT COLUMN_NAME
      FROM information_schema.COLUMNS

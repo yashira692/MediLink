@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import CambiarPassword from './CambiarPassword.jsx'
 import { api, descargarArchivo } from './services/api.js'
 import {
   etiquetaEstado,
@@ -28,6 +29,7 @@ const ACCIONES_BITACORA = {
   reprogramar_cita: 'Reprogramó una cita',
   ver_reporte: 'Generó un reporte',
   exportar_reporte: 'Exportó un reporte',
+  cambiar_password: 'Cambió su contraseña',
 }
 
 function PanelAdministrador({ administrador, cerrarSesion, solicitarConfirmacion }) {
@@ -76,6 +78,15 @@ function PanelAdministrador({ administrador, cerrarSesion, solicitarConfirmacion
 
               {menuUsuario && (
                 <div className="user-dropdown">
+                  <button
+                    onClick={() => {
+                      setVista('password')
+                      setMenuUsuario(false)
+                    }}
+                  >
+                    Cambiar contraseña
+                  </button>
+
                   <button className="dropdown-logout" onClick={cerrarSesion}>
                     Cerrar sesión
                   </button>
@@ -95,6 +106,9 @@ function PanelAdministrador({ administrador, cerrarSesion, solicitarConfirmacion
           )}
           {vista === 'reportes' && <Reportes />}
           {vista === 'bitacora' && <Bitacora />}
+          {vista === 'password' && (
+            <CambiarPassword ruta="/admin/password" cerrarSesion={cerrarSesion} />
+          )}
         </section>
       </main>
     </div>
@@ -132,6 +146,7 @@ function Dashboard() {
         ['Atendidas', datos.atendidas],
         ['Canceladas', datos.canceladas],
         ['Por atender', datos.activas],
+        ['Vencidas', datos.vencidas],
         ['Pacientes activos', datos.pacientes],
         ['Médicos activos', datos.medicos],
       ]
@@ -628,6 +643,7 @@ function Reportes() {
         ['Atendidas', reporte.resumen.atendidas],
         ['Canceladas', reporte.resumen.canceladas],
         ['Por atender', reporte.resumen.activas],
+        ['Vencidas', reporte.resumen.vencidas],
       ]
     : []
 

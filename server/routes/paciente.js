@@ -1,7 +1,7 @@
 import { Router } from 'express'
-import bcrypt from 'bcryptjs'
 import pool from '../config/db.js'
 import { autenticar, soloPacientes } from '../middleware/auth.js'
+import { cambiarPassword } from '../services/cuenta.js'
 import { VERSION_AVISO_PRIVACIDAD } from '../utils/validacion.js'
 
 const router = Router()
@@ -129,59 +129,14 @@ router.put('/perfil', async (req, res, next) => {
   }
 })
 
-router.put('/password', async (req, res, next) => {
-  const passwordActual = req.body.passwordActual
-  const nuevaPassword = req.body.nuevaPassword
-
-  if (
-    !passwordActual ||
-    typeof nuevaPassword !== 'string' ||
-    nuevaPassword.length < 8 ||
-    !/[A-Z]/.test(nuevaPassword) ||
-    !/[a-z]/.test(nuevaPassword) ||
-    !/\d/.test(nuevaPassword)
-  ) {
-    return res.status(400).json({
-      mensaje:
-        'La nueva contraseña debe tener 8 caracteres, una mayúscula, una minúscula y un número.',
-    })
-  }
-
-  try {
-    const [[usuario]] = await pool.execute(
-      'SELECT password_hash FROM usuarios WHERE id_usuario = ? LIMIT 1',
-      [req.usuario.idUsuario],
-    )
-
-    if (!usuario || !(await bcrypt.compare(passwordActual, usuario.password_hash))) {
-      return res.status(401).json({ mensaje: 'La contraseña actual es incorrecta.' })
-    }
-
-    if (await bcrypt.compare(nuevaPassword, usuario.password_hash)) {
-      return res.status(400).json({
-        mensaje: 'La nueva contraseña debe ser diferente de la actual.',
-      })
-    }
-
-    const passwordHash = await bcrypt.hash(nuevaPassword, 12)
-    await pool.execute(
-      `UPDATE usuarios
-       SET password_hash = ?, token_version = token_version + 1
-       WHERE id_usuario = ?`,
-      [passwordHash, req.usuario.idUsuario],
-    )
-    await pool.execute(
+router.put('/password', (req, res, next) =>
+  cambiarPassword(req, res, next, () =>
+    pool.execute(
       `INSERT INTO notificaciones (id_paciente, tipo, mensaje)
        VALUES (?, 'sistema', 'Tu contraseña fue actualizada correctamente.')`,
       [req.usuario.idPaciente],
-    )
-
-    return res.json({
-      mensaje: 'Contraseña actualizada. Inicia sesión nuevamente.',
-    })
-  } catch (error) {
-    return next(error)
-  }
-})
+    ),
+  ),
+)
 
 export default router

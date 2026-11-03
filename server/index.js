@@ -12,6 +12,7 @@ import historialRoutes from './routes/historial.js'
 import medicoRoutes from './routes/medico.js'
 import notificacionesRoutes from './routes/notificaciones.js'
 import pacienteRoutes from './routes/paciente.js'
+import { marcarCitasVencidas } from './services/citasVencidas.js'
 import { generarRecordatorios } from './services/recordatorios.js'
 
 const app = express()
@@ -70,8 +71,15 @@ try {
   app.listen(port, () => {
     console.log(`MediLink API disponible en http://localhost:${port}`)
   })
+  const actualizarCitasVencidas = () =>
+    marcarCitasVencidas().catch((error) => {
+      console.error('No se pudieron marcar las citas vencidas:', error.message)
+    })
+
+  await actualizarCitasVencidas()
   await generarRecordatorios()
   const recordatoriosInterval = setInterval(() => {
+    actualizarCitasVencidas()
     generarRecordatorios().catch((error) => {
       console.error('No se pudieron generar recordatorios:', error.message)
     })
