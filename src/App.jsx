@@ -221,7 +221,6 @@ function App() {
     const datos = await api('/paciente/perfil', {
       method: 'PUT',
       body: JSON.stringify({
-        correo: datosPerfil.correo,
         telefono: datosPerfil.telefono,
         direccion: datosPerfil.direccion,
       }),
@@ -865,6 +864,12 @@ function AsistenteIA({ solicitarConfirmacion }) {
           <button onClick={() => enviarPregunta('¿Qué especialidades hay?')}>
             ¿Qué especialidades hay?
           </button>
+          <button onClick={() => enviarPregunta('¿Qué debo llevar a mi consulta?')}>
+            ¿Qué debo llevar a mi consulta?
+          </button>
+          <button onClick={() => enviarPregunta('¿Cuál es el horario de atención?')}>
+            ¿Cuál es el horario de atención?
+          </button>
           <button onClick={() => enviarPregunta('¿Dónde veo mi receta?')}>
             ¿Dónde veo mi receta?
           </button>
@@ -1049,9 +1054,11 @@ function PerfilPaciente({ paciente, actualizarPerfil, cerrarSesion }) {
 
           <label>Correo electrónico</label>
           <input
+            className="identity-field"
             type="email"
             value={formulario.correo}
-            onChange={(e) => actualizarCampo('correo', e.target.value)}
+            readOnly
+            aria-readonly="true"
           />
 
           <label>Teléfono</label>

@@ -99,7 +99,7 @@ try {
   }
 
   console.log(
-    'Recordatorio 24h, prevención de duplicados y cancelación: correctos.',
+    'Recordatorio 30 min, prevención de duplicados y cancelación: correctos.',
   )
 } finally {
   if (idPaciente) {

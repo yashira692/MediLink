@@ -39,11 +39,10 @@ router.get('/perfil', async (req, res, next) => {
 })
 
 router.put('/perfil', async (req, res, next) => {
-  const correo = req.body.correo?.trim().toLowerCase()
   const telefono = req.body.telefono?.trim()
   const direccion = req.body.direccion?.trim() || null
 
-  if (!correo || !telefono) {
+  if (!telefono) {
     return res.status(400).json({ mensaje: 'Completa los campos obligatorios.' })
   }
 
@@ -57,21 +56,11 @@ router.put('/perfil', async (req, res, next) => {
     connection = await pool.getConnection()
     await connection.beginTransaction()
 
-    const [correoUsado] = await connection.execute(
-      'SELECT id_usuario FROM usuarios WHERE correo = ? AND id_usuario <> ? LIMIT 1',
-      [correo, req.usuario.idUsuario],
-    )
-
-    if (correoUsado.length > 0) {
-      await connection.rollback()
-      return res.status(409).json({ mensaje: 'Ese correo ya está registrado.' })
-    }
-
     await connection.execute(
       `UPDATE usuarios
-       SET correo = ?, telefono = ?
+       SET telefono = ?
        WHERE id_usuario = ?`,
-      [correo, telefono, req.usuario.idUsuario],
+      [telefono, req.usuario.idUsuario],
     )
     await connection.execute(
       `UPDATE pacientes

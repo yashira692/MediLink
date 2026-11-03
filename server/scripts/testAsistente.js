@@ -58,6 +58,9 @@ try {
   const reprogramacionRapida = await preguntar('¿Cómo reprogramo una cita?')
   const emergenciaColoquial = await preguntar('Me duele el pecho')
   const dosis = await preguntar('¿Qué dosis de ibuprofeno debo tomar?')
+  const preparacion = await preguntar('¿Qué debo llevar a mi consulta?')
+  const horario = await preguntar('¿Cuál es el horario de atención?')
+  const ayuno = await preguntar('¿Debo ir en ayunas?')
 
   if (cita.intent !== 'reservar_cita') {
     throw new Error('No se detectó la intención de reserva.')
@@ -73,6 +76,15 @@ try {
   }
   if (dosis.intent !== 'limite_clinico') {
     throw new Error('No se aplicó el límite sobre dosis.')
+  }
+  if (preparacion.intent !== 'preparacion_consulta') {
+    throw new Error('La pregunta sobre preparación no fue reconocida.')
+  }
+  if (ayuno.intent !== 'preparacion_consulta') {
+    throw new Error('La pregunta sobre ayuno no fue reconocida.')
+  }
+  if (horario.intent !== 'horarios_atencion') {
+    throw new Error('La pregunta sobre horarios no fue reconocida.')
   }
   if (!['dialogflow', 'local'].includes(cita.proveedor)) {
     throw new Error('No se registró el proveedor de la respuesta.')
@@ -94,7 +106,7 @@ try {
   }
 
   let historial = await solicitud('/asistente/historial')
-  if (historial.consultas.length !== 8) {
+  if (historial.consultas.length !== 11) {
     throw new Error('La conversación no se guardó correctamente.')
   }
 

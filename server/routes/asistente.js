@@ -100,6 +100,44 @@ async function generarRespuestaLocal(pregunta) {
     }
   }
 
+  if (
+    contiene(texto, [
+      'debo llevar',
+      'que llevo',
+      'que llevar',
+      'que documentos',
+      'documentos debo',
+      'documentos llevo',
+      'prepararme',
+      'preparo',
+      'preparacion',
+      'ayunas',
+    ])
+  ) {
+    return {
+      intent: 'preparacion_consulta',
+      respuesta:
+        'Para tu consulta lleva tu DNI, la lista de medicamentos que tomas y tus exámenes o informes anteriores, y procura llegar 10 minutos antes. Si necesitas una preparación especial, como ir en ayunas, confírmalo con tu médico o con el consultorio.',
+    }
+  }
+
+  if (
+    contiene(texto, [
+      'horario',
+      'hora de atencion',
+      'horas de atencion',
+      'atienden',
+      'abren',
+      'cierran',
+    ])
+  ) {
+    return {
+      intent: 'horarios_atencion',
+      respuesta:
+        'Por lo general, los médicos atienden de lunes a sábado, de 8:00 a. m. a 5:00 p. m. Puedes ver los horarios libres de cada médico en “Reservar cita”, al elegir la especialidad, el médico y la fecha.',
+    }
+  }
+
   if (contiene(texto, ['mis citas', 'ver cita', 'estado de mi cita'])) {
     return {
       intent: 'consultar_citas',
@@ -244,7 +282,7 @@ async function generarRespuestaLocal(pregunta) {
   return {
     intent: 'ayuda_general',
     respuesta:
-      'Puedo orientarte sobre citas, especialidades, perfil, notificaciones, recetas, resultados y uso del sistema. No realizo diagnósticos ni indico tratamientos médicos.',
+      'Puedo orientarte sobre citas, horarios de atención, preparación para la consulta, especialidades, perfil, notificaciones, recetas, resultados y uso del sistema. No realizo diagnósticos ni indico tratamientos médicos.',
     proveedor: 'local',
     confianza: null,
   }

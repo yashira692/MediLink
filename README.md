@@ -113,8 +113,9 @@ reservar, cancelar o reprogramar una cita y actualizar el perfil. La campana
 muestra únicamente la cantidad pendiente y el paciente puede marcar cada aviso
 o todos los avisos como leídos.
 
-El servidor revisa al iniciar y cada 15 minutos las citas previstas para las
-próximas 24 horas. Genera un recordatorio único por cita y horario; cancelar o
+El servidor revisa al iniciar y cada 15 minutos las citas de los próximos 30
+minutos, así que el aviso llega entre 15 y 30 minutos antes de la cita. Genera
+un recordatorio único por cita y horario; cancelar o
 reprogramar elimina el recordatorio anterior pendiente.
 
 ## Asistente virtual

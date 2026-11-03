@@ -94,6 +94,21 @@ try {
   token = null
   await login(passwordCambiada)
 
+  await solicitud('/paciente/perfil', {
+    method: 'PUT',
+    body: JSON.stringify({
+      correo: `otro.${correo}`,
+      telefono: '900555666',
+    }),
+  })
+  const perfil = await solicitud('/paciente/perfil')
+  if (perfil.datos.paciente.correo !== correo) {
+    throw new Error('El paciente pudo cambiar su correo.')
+  }
+  if (perfil.datos.paciente.telefono !== '900555666') {
+    throw new Error('No se guardó el teléfono del paciente.')
+  }
+
   const recuperacion = await solicitud('/auth/solicitar-recuperacion', {
     method: 'POST',
     body: JSON.stringify({ correo }),
