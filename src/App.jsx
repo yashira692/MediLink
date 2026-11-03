@@ -1,39 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
+import HistorialMedico from './HistorialMedico.jsx'
+import PanelMedico from './PanelMedico.jsx'
 import {
   api,
-  descargarArchivo,
   eliminarToken,
   guardarToken,
   obtenerToken,
+  rolSesion,
 } from './services/api.js'
-
-function fechaActual() {
-  const ahora = new Date()
-  const desplazamiento = ahora.getTimezoneOffset() * 60000
-  return new Date(ahora.getTime() - desplazamiento).toISOString().slice(0, 10)
-}
-
-function formatearFecha(fecha) {
-  return new Intl.DateTimeFormat('es-PE', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(`${fecha}T00:00:00Z`))
-}
-
-function formatearHora(hora) {
-  const [horas, minutos] = hora.slice(0, 5).split(':').map(Number)
-  return new Intl.DateTimeFormat('es-PE', {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(2000, 0, 1, horas, minutos))
-}
-
-function etiquetaEstado(estado) {
-  return estado.charAt(0).toUpperCase() + estado.slice(1)
-}
+import {
+  etiquetaEstado,
+  fechaActual,
+  formatearFecha,
+  formatearHora,
+} from './utils/formato.js'
 
 function formatearFechaHora(fecha) {
   return new Intl.DateTimeFormat('es-PE', {
@@ -64,15 +45,17 @@ function App() {
   const [notificaciones, setNotificaciones] = useState([])
 
   const [paciente, setPaciente] = useState(null)
+  const [medico, setMedico] = useState(null)
   const [sesionActiva, setSesionActiva] = useState(Boolean(obtenerToken()))
   const [cargandoSesion, setCargandoSesion] = useState(Boolean(obtenerToken()))
 
   useEffect(() => {
     if (!obtenerToken()) return
 
-    api('/paciente/perfil')
-      .then(({ paciente: pacienteActual }) => {
-        setPaciente(pacienteActual)
+    api(rolSesion() === 'medico' ? '/medico/perfil' : '/paciente/perfil')
+      .then((datos) => {
+        setPaciente(datos.paciente || null)
+        setMedico(datos.medico || null)
         setSesionActiva(true)
       })
       .catch(() => {
@@ -83,7 +66,7 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!sesionActiva || !obtenerToken()) return
+    if (!sesionActiva || rolSesion() !== 'paciente') return
 
     cargarCitas()
     cargarNotificaciones()
@@ -202,7 +185,8 @@ function App() {
       })
 
       guardarToken(datos.token)
-      setPaciente(datos.paciente)
+      setPaciente(datos.paciente || null)
+      setMedico(datos.medico || null)
       setSesionActiva(true)
     } catch (error) {
       alert(error.message)
@@ -278,12 +262,46 @@ function App() {
   function cerrarSesion() {
     eliminarToken()
     setPaciente(null)
+    setMedico(null)
     setSesionActiva(false)
   }
 
   const notificacionesNoLeidas = notificaciones.filter(
     (notificacion) => !notificacion.leido,
   ).length
+
+  const modalConfirmacion = confirmacion && (
+    <div className="modal-overlay" role="presentation">
+      <div
+        className="confirm-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirmacion-titulo"
+      >
+        <div className="confirm-icon">!</div>
+        <h3 id="confirmacion-titulo">{confirmacion.titulo}</h3>
+        <p>{confirmacion.mensaje}</p>
+        <div className="confirm-actions">
+          <button
+            className="modal-secondary-btn"
+            onClick={() => setConfirmacion(null)}
+            disabled={procesandoConfirmacion}
+          >
+            Volver
+          </button>
+          <button
+            className="modal-danger-btn"
+            onClick={ejecutarConfirmacion}
+            disabled={procesandoConfirmacion}
+          >
+            {procesandoConfirmacion
+              ? confirmacion.textoProcesando
+              : confirmacion.textoConfirmar}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 
   if (cargandoSesion) {
     return <div className="session-loading">Verificando sesión...</div>
@@ -296,6 +314,24 @@ function App() {
           iniciarSesion={iniciarSesion}
           registrarPaciente={registrarPaciente}
         />
+        {aviso && (
+          <div className={`app-toast ${aviso.tipo}`} role="status">
+            {aviso.mensaje}
+          </div>
+        )}
+      </>
+    )
+  }
+
+  if (medico) {
+    return (
+      <>
+        <PanelMedico
+          medico={medico}
+          cerrarSesion={cerrarSesion}
+          solicitarConfirmacion={solicitarConfirmacion}
+        />
+        {modalConfirmacion}
         {aviso && (
           <div className={`app-toast ${aviso.tipo}`} role="status">
             {aviso.mensaje}
@@ -442,38 +478,7 @@ function App() {
         </section>
       </main>
 
-      {confirmacion && (
-        <div className="modal-overlay" role="presentation">
-          <div
-            className="confirm-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="confirmacion-titulo"
-          >
-            <div className="confirm-icon">!</div>
-            <h3 id="confirmacion-titulo">{confirmacion.titulo}</h3>
-            <p>{confirmacion.mensaje}</p>
-            <div className="confirm-actions">
-              <button
-                className="modal-secondary-btn"
-                onClick={() => setConfirmacion(null)}
-                disabled={procesandoConfirmacion}
-              >
-                Volver
-              </button>
-              <button
-                className="modal-danger-btn"
-                onClick={ejecutarConfirmacion}
-                disabled={procesandoConfirmacion}
-              >
-                {procesandoConfirmacion
-                  ? confirmacion.textoProcesando
-                  : confirmacion.textoConfirmar}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {modalConfirmacion}
 
       {aviso && (
         <div className={`app-toast ${aviso.tipo}`} role="status">
@@ -708,192 +713,6 @@ function ReservarCita({ reservarCita }) {
           <p><strong>Motivo:</strong> {motivo || 'No indicado'}</p>
         </div>
       </div>
-    </>
-  )
-}
-
-function HistorialMedico() {
-  const [pestana, setPestana] = useState('consultas')
-  const [historial, setHistorial] = useState({
-    consultas: [],
-    recetas: [],
-    resultados: [],
-  })
-  const [cargando, setCargando] = useState(true)
-  const [descargando, setDescargando] = useState(null)
-
-  useEffect(() => {
-    api('/historial')
-      .then(setHistorial)
-      .catch((error) => alert(error.message))
-      .finally(() => setCargando(false))
-  }, [])
-
-  async function descargarDocumento(idDocumento) {
-    setDescargando(idDocumento)
-
-    try {
-      await descargarArchivo(
-        `/historial/documentos/${idDocumento}/descargar`,
-      )
-    } catch (error) {
-      alert(error.message)
-    } finally {
-      setDescargando(null)
-    }
-  }
-
-  return (
-    <>
-      <h1>Historial médico</h1>
-      <p className="subtitle">
-        Consulta tus registros médicos, recetas digitales y resultados de laboratorio.
-      </p>
-
-      {cargando && <div className="panel">Cargando historial médico...</div>}
-
-      {!cargando && (
-        <>
-      <div className="tabs">
-        <button
-          className={pestana === 'consultas' ? 'tab active-tab' : 'tab'}
-          onClick={() => setPestana('consultas')}
-        >
-          Consultas
-        </button>
-
-        <button
-          className={pestana === 'recetas' ? 'tab active-tab' : 'tab'}
-          onClick={() => setPestana('recetas')}
-        >
-          Recetas digitales
-        </button>
-
-        <button
-          className={pestana === 'resultados' ? 'tab active-tab' : 'tab'}
-          onClick={() => setPestana('resultados')}
-        >
-          Resultados de laboratorio
-        </button>
-      </div>
-
-      {pestana === 'consultas' && (
-        <div className="panel">
-          <h3>Consultas médicas</h3>
-
-          {historial.consultas.length === 0 && (
-            <p>No tienes consultas médicas registradas.</p>
-          )}
-
-          {historial.consultas.map((consulta) => (
-            <div className="history-item" key={consulta.id}>
-              <div className="history-top">
-                <div>
-                  <h4>{consulta.medico}</h4>
-                  <p>{consulta.especialidad}</p>
-                </div>
-                <span className="estado">Completada</span>
-              </div>
-
-              <span>{formatearFecha(consulta.fecha)}</span>
-              <p>{consulta.descripcion}</p>
-              <p><strong>Diagnóstico:</strong> {consulta.diagnostico}</p>
-              {consulta.observaciones && (
-                <p><strong>Observaciones:</strong> {consulta.observaciones}</p>
-              )}
-
-              {consulta.idDocumento && (
-                <button
-                  disabled={descargando === consulta.idDocumento}
-                  onClick={() => descargarDocumento(consulta.idDocumento)}
-                >
-                  {descargando === consulta.idDocumento
-                    ? 'Descargando...'
-                    : 'Descargar informe PDF'}
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {pestana === 'recetas' && (
-        <div className="panel">
-          <h3>Recetas digitales</h3>
-
-          {historial.recetas.length === 0 && (
-            <p>No tienes recetas digitales registradas.</p>
-          )}
-
-          {historial.recetas.map((receta) => (
-            <div className="history-item" key={receta.id}>
-              <h4>Receta de {receta.medico}</h4>
-              <p><strong>Especialidad:</strong> {receta.especialidad}</p>
-              <p><strong>Fecha:</strong> {formatearFecha(receta.fecha)}</p>
-
-              {receta.medicamentos.map((medicamento) => (
-                <div className="medicine-item" key={`${receta.id}-${medicamento.medicamento}`}>
-                  <strong>{medicamento.medicamento} {medicamento.dosis}</strong>
-                  <p>{medicamento.frecuencia} durante {medicamento.duracion}.</p>
-                  {medicamento.indicacion && <p>{medicamento.indicacion}</p>}
-                </div>
-              ))}
-
-              {receta.indicacionesGenerales && (
-                <p><strong>Indicaciones generales:</strong> {receta.indicacionesGenerales}</p>
-              )}
-
-              {receta.idDocumento && (
-                <button
-                  disabled={descargando === receta.idDocumento}
-                  onClick={() => descargarDocumento(receta.idDocumento)}
-                >
-                  {descargando === receta.idDocumento
-                    ? 'Descargando...'
-                    : 'Descargar receta PDF'}
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {pestana === 'resultados' && (
-        <div className="panel">
-          <h3>Resultados de laboratorio</h3>
-
-          {historial.resultados.length === 0 && (
-            <p>No tienes resultados de laboratorio registrados.</p>
-          )}
-
-          {historial.resultados.map((resultado) => (
-            <div className="history-item" key={resultado.id}>
-              <div className="history-top">
-                <div>
-                  <h4>{resultado.nombreExamen}</h4>
-                  <p><strong>Fecha:</strong> {formatearFecha(resultado.fecha)}</p>
-                </div>
-                <span className="estado">{etiquetaEstado(resultado.estado)}</span>
-              </div>
-
-              <p><strong>Resultado:</strong> {resultado.resultado}</p>
-
-              {resultado.idDocumento && (
-                <button
-                  disabled={descargando === resultado.idDocumento}
-                  onClick={() => descargarDocumento(resultado.idDocumento)}
-                >
-                  {descargando === resultado.idDocumento
-                    ? 'Descargando...'
-                    : 'Descargar resultado PDF'}
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-        </>
-      )}
     </>
   )
 }
@@ -1412,7 +1231,7 @@ function LoginRegistro({ iniciarSesion, registrarPaciente }) {
   }
 
   const descripciones = {
-    login: 'Ingresa a tu perfil paciente.',
+    login: 'Ingresa a tu cuenta de MediLink.',
     registro: 'Crea tu cuenta para acceder al sistema.',
     recuperar: 'Ingresa el correo asociado a tu cuenta.',
     restablecer: 'Crea una contraseña nueva para tu cuenta.',

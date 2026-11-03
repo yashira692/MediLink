@@ -6,6 +6,7 @@ import asistenteRoutes from './routes/asistente.js'
 import authRoutes from './routes/auth.js'
 import citasRoutes from './routes/citas.js'
 import historialRoutes from './routes/historial.js'
+import medicoRoutes from './routes/medico.js'
 import notificacionesRoutes from './routes/notificaciones.js'
 import pacienteRoutes from './routes/paciente.js'
 import { generarRecordatorios } from './services/recordatorios.js'
@@ -27,6 +28,7 @@ app.use('/api/asistente', asistenteRoutes)
 app.use('/api/paciente', pacienteRoutes)
 app.use('/api/citas', citasRoutes)
 app.use('/api/historial', historialRoutes)
+app.use('/api/medico', medicoRoutes)
 app.use('/api/notificaciones', notificacionesRoutes)
 
 app.use((error, _req, res, _next) => {

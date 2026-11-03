@@ -989,6 +989,58 @@ button:disabled {
   font-size: 14px;
 }
 
+/* ===== PERFIL MÉDICO ===== */
+
+.agenda-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.agenda-nav strong {
+  width: 100%;
+  text-align: center;
+}
+
+.agenda-dia + .agenda-dia {
+  margin-top: 28px;
+}
+
+.volver-btn {
+  margin-bottom: 18px;
+}
+
+.receta-titulo {
+  margin-top: 28px;
+}
+
+.medicamento-box {
+  margin-top: 16px;
+  padding: 18px;
+  background: #f7fbff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+
+.medicamento-box label:first-child {
+  margin-top: 0;
+}
+
+.subir-documento {
+  margin-bottom: 24px;
+}
+
+.subir-documento button + button {
+  margin-left: 10px;
+}
+
+.subir-documento input[type="file"] {
+  background: #f7fbff;
+}
+
 /* ===== RESPONSIVE ===== */
 
 @media (max-width: 1000px) {

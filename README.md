@@ -58,6 +58,27 @@ Express y persistencia MySQL.
 
 El archivo `.env` contiene información privada y no se incluye en Git.
 
+## Perfil médico
+
+Los médicos inician sesión en la misma pantalla que los pacientes y la app los
+lleva a su panel según el rol. Desde allí pueden:
+
+- Ver la agenda por día o por semana.
+- Aprobar, reprogramar o cancelar citas; el paciente recibe una notificación.
+- Registrar la consulta (el día de la cita o después), con diagnóstico y receta
+  opcional. Se generan los PDF y la cita pasa a `completada`.
+- Consultar el historial solo de los pacientes con los que tienen citas.
+- Subir un PDF de hasta 10 MB al historial del paciente: un resultado de
+  laboratorio, o el informe o la receta de una consulta propia. El paciente
+  recibe un aviso. Si ya había un informe o receta, descarga el PDF más reciente.
+  Los archivos se guardan en `storage/`, que no pasa a otro equipo con Git.
+
+`npm.cmd run db:setup` crea cuatro médicos de demostración, por ejemplo
+`emily.roberts@medilink.pe`, con la contraseña `Medilink2026!`. Son solo para
+desarrollo y no deben usarse en producción.
+
+Con la API iniciada, `node server/scripts/testMedico.js` prueba este perfil.
+
 ## Documentos médicos
 
 Los informes, recetas y resultados se registran en `documentos_medicos`. La API

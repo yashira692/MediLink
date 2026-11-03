@@ -20,6 +20,7 @@ function crearToken(usuario) {
     {
       idUsuario: usuario.id_usuario,
       idPaciente: usuario.id_paciente,
+      idMedico: usuario.id_medico,
       rol: usuario.rol,
       tokenVersion: usuario.token_version || 0,
     },
@@ -39,6 +40,19 @@ function pacientePublico(usuario) {
     telefono: usuario.telefono,
     fechaNacimiento: usuario.fecha_nacimiento,
     direccion: usuario.direccion,
+    rol: usuario.rol,
+  }
+}
+
+function medicoPublico(usuario) {
+  return {
+    idUsuario: usuario.id_usuario,
+    idMedico: usuario.id_medico,
+    nombres: usuario.nombres,
+    apellidos: usuario.apellidos,
+    correo: usuario.correo,
+    cmp: usuario.cmp,
+    especialidad: usuario.especialidad,
     rol: usuario.rol,
   }
 }
@@ -200,10 +214,23 @@ router.post('/login', async (req, res, next) => {
 
   try {
     const [usuarios] = await pool.execute(
-      `SELECT u.*, p.id_paciente, p.fecha_nacimiento, p.direccion
+      `SELECT
+        u.*,
+        p.id_paciente,
+        p.fecha_nacimiento,
+        p.direccion,
+        m.id_medico,
+        m.cmp,
+        e.nombre AS especialidad
        FROM usuarios u
-       INNER JOIN pacientes p ON p.id_usuario = u.id_usuario
-       WHERE u.correo = ? AND u.rol = 'paciente'
+       LEFT JOIN pacientes p ON p.id_usuario = u.id_usuario
+       LEFT JOIN medicos m ON m.id_usuario = u.id_usuario
+       LEFT JOIN especialidades e ON e.id_especialidad = m.id_especialidad
+       WHERE u.correo = ?
+         AND (
+           (u.rol = 'paciente' AND p.id_paciente IS NOT NULL)
+           OR (u.rol = 'medico' AND m.id_medico IS NOT NULL)
+         )
        LIMIT 1`,
       [correo],
     )
@@ -219,6 +246,14 @@ router.post('/login', async (req, res, next) => {
     }
 
     intentosLogin.delete(clave)
+
+    if (usuario.rol === 'medico') {
+      return res.json({
+        token: crearToken(usuario),
+        medico: medicoPublico(usuario),
+      })
+    }
+
     return res.json({
       token: crearToken(usuario),
       paciente: pacientePublico(usuario),
@@ -242,7 +277,7 @@ router.post('/solicitar-recuperacion', async (req, res, next) => {
   try {
     const [usuarios] = await pool.execute(
       `SELECT id_usuario FROM usuarios
-       WHERE correo = ? AND rol = 'paciente' AND estado = 1 LIMIT 1`,
+       WHERE correo = ? AND rol IN ('paciente', 'medico') AND estado = 1 LIMIT 1`,
       [correo],
     )
     const usuario = usuarios[0]

@@ -12,11 +12,25 @@ export function eliminarToken() {
   localStorage.removeItem(TOKEN_KEY)
 }
 
+// Solo decide qué pantallas mostrar; el backend valida el rol en cada ruta.
+export function rolSesion() {
+  const token = obtenerToken()
+
+  if (!token) return null
+
+  try {
+    const contenido = token.split('.')[1].replaceAll('-', '+').replaceAll('_', '/')
+    return JSON.parse(atob(contenido)).rol
+  } catch {
+    return null
+  }
+}
+
 export async function api(ruta, opciones = {}) {
   const token = obtenerToken()
   const headers = new Headers(opciones.headers)
 
-  if (opciones.body) {
+  if (opciones.body && !(opciones.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json')
   }
 
@@ -63,8 +77,11 @@ export async function descargarArchivo(ruta) {
   }
 
   const disposicion = respuesta.headers.get('Content-Disposition') || ''
+  const nombreUtf8 = disposicion.match(/filename\*=UTF-8''([^;]+)/i)
   const coincidencia = disposicion.match(/filename="?([^";]+)"?/)
-  const nombre = coincidencia?.[1] || 'documento-medico.pdf'
+  const nombre = nombreUtf8
+    ? decodeURIComponent(nombreUtf8[1])
+    : coincidencia?.[1] || 'documento-medico.pdf'
   const archivo = await respuesta.blob()
   const url = URL.createObjectURL(archivo)
   const enlace = document.createElement('a')
