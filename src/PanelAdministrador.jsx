@@ -18,6 +18,17 @@ const MEDICO_VACIO = {
   password: '',
 }
 const ESPECIALIDAD_VACIA = { nombre: '', descripcion: '' }
+const ACCIONES_BITACORA = {
+  ver_historial: 'Vio el historial',
+  descargar_documento: 'Descargó un documento',
+  subir_documento: 'Subió un documento',
+  registrar_consulta: 'Registró una consulta',
+  aprobar_cita: 'Aprobó una cita',
+  cancelar_cita: 'Canceló una cita',
+  reprogramar_cita: 'Reprogramó una cita',
+  ver_reporte: 'Generó un reporte',
+  exportar_reporte: 'Exportó un reporte',
+}
 
 function PanelAdministrador({ administrador, cerrarSesion, solicitarConfirmacion }) {
   const [vista, setVista] = useState('dashboard')
@@ -28,6 +39,7 @@ function PanelAdministrador({ administrador, cerrarSesion, solicitarConfirmacion
     ['medicos', 'Médicos'],
     ['especialidades', 'Especialidades'],
     ['reportes', 'Reportes'],
+    ['bitacora', 'Bitácora'],
   ]
 
   return (
@@ -82,6 +94,7 @@ function PanelAdministrador({ administrador, cerrarSesion, solicitarConfirmacion
             <GestionEspecialidades solicitarConfirmacion={solicitarConfirmacion} />
           )}
           {vista === 'reportes' && <Reportes />}
+          {vista === 'bitacora' && <Bitacora />}
         </section>
       </main>
     </div>
@@ -729,6 +742,96 @@ function Reportes() {
             )}
           </div>
         </>
+      )}
+    </>
+  )
+}
+
+function Bitacora() {
+  const hoy = fechaActual()
+  const [desde, setDesde] = useState(`${hoy.slice(0, 7)}-01`)
+  const [hasta, setHasta] = useState(hoy)
+  const [registros, setRegistros] = useState(null)
+  const [consultando, setConsultando] = useState(false)
+
+  async function consultar(e) {
+    e.preventDefault()
+    setConsultando(true)
+
+    try {
+      const datos = await api(`/admin/bitacora?desde=${desde}&hasta=${hasta}`)
+      setRegistros(datos.registros)
+    } catch (error) {
+      alert(error.message)
+    } finally {
+      setConsultando(false)
+    }
+  }
+
+  return (
+    <>
+      <h1>Bitácora de accesos</h1>
+      <p className="subtitle">
+        Registro de quién consultó o cambió información de pacientes.
+      </p>
+
+      <form className="filtros-admin" onSubmit={consultar}>
+        <div>
+          <label>Desde</label>
+          <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
+        </div>
+
+        <div>
+          <label>Hasta</label>
+          <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+        </div>
+
+        <button className="edit-btn" type="submit" disabled={consultando}>
+          {consultando ? 'Consultando...' : 'Consultar'}
+        </button>
+      </form>
+
+      {registros && (
+        <div className="panel">
+          {registros.length === 0 && <p>No hay registros en este período.</p>}
+
+          {registros.length > 0 && (
+            <>
+              <p className="nota-suave">
+                Se muestran los {registros.length} registros más recientes (máximo 500).
+              </p>
+
+              <div className="tabla-contenedor">
+                <table className="tabla-reporte">
+                  <thead>
+                    <tr>
+                      <th>Fecha y hora</th>
+                      <th>Usuario</th>
+                      <th>Rol</th>
+                      <th>Acción</th>
+                      <th>Paciente</th>
+                      <th>Detalle</th>
+                      <th>IP</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {registros.map((registro) => (
+                      <tr key={registro.id}>
+                        <td>{registro.fecha.replace('T', ' ')}</td>
+                        <td>{registro.usuario}</td>
+                        <td>{registro.rol === 'medico' ? 'Médico' : 'Administrador'}</td>
+                        <td>{ACCIONES_BITACORA[registro.accion] || registro.accion}</td>
+                        <td>{registro.paciente || '-'}</td>
+                        <td>{registro.detalle || '-'}</td>
+                        <td>{registro.ip || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
       )}
     </>
   )

@@ -2,6 +2,7 @@ import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import pool from '../config/db.js'
 import { autenticar, soloPacientes } from '../middleware/auth.js'
+import { VERSION_AVISO_PRIVACIDAD } from '../utils/validacion.js'
 
 const router = Router()
 
@@ -20,6 +21,7 @@ router.get('/perfil', async (req, res, next) => {
         u.telefono,
         p.fecha_nacimiento AS fechaNacimiento,
         p.direccion,
+        p.consentimiento_fecha AS consentimientoFecha,
         u.rol
        FROM usuarios u
        INNER JOIN pacientes p ON p.id_usuario = u.id_usuario
@@ -33,6 +35,26 @@ router.get('/perfil', async (req, res, next) => {
     }
 
     return res.json({ paciente: pacientes[0] })
+  } catch (error) {
+    return next(error)
+  }
+})
+
+router.post('/consentimiento', async (req, res, next) => {
+  try {
+    await pool.execute(
+      `UPDATE pacientes
+       SET consentimiento_fecha = NOW(), consentimiento_version = ?
+       WHERE id_paciente = ?`,
+      [VERSION_AVISO_PRIVACIDAD, req.usuario.idPaciente],
+    )
+    const [[consentimiento]] = await pool.execute(
+      `SELECT consentimiento_fecha AS consentimientoFecha
+       FROM pacientes WHERE id_paciente = ?`,
+      [req.usuario.idPaciente],
+    )
+
+    return res.json(consentimiento)
   } catch (error) {
     return next(error)
   }
@@ -87,6 +109,7 @@ router.put('/perfil', async (req, res, next) => {
         u.telefono,
         p.fecha_nacimiento AS fechaNacimiento,
         p.direccion,
+        p.consentimiento_fecha AS consentimientoFecha,
         u.rol
        FROM usuarios u
        INNER JOIN pacientes p ON p.id_usuario = u.id_usuario

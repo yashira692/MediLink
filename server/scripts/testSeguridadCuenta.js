@@ -67,6 +67,7 @@ try {
       correo,
       telefono: '922222222',
       password: passwordInicial,
+      aceptaPrivacidad: true,
     }),
   })
   token = registro.datos.token
@@ -107,6 +108,49 @@ try {
   }
   if (perfil.datos.paciente.telefono !== '900555666') {
     throw new Error('No se guardó el teléfono del paciente.')
+  }
+  if (!perfil.datos.paciente.consentimientoFecha) {
+    throw new Error('No se guardó el consentimiento del registro.')
+  }
+
+  const sinConsentimiento = await solicitud(
+    '/auth/registro',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        nombres: 'Sin',
+        apellidos: 'Consentimiento',
+        dni: String(Date.now() + 7).slice(-8),
+        correo: `sin.${correo}`,
+        telefono: '900555667',
+        password: passwordInicial,
+      }),
+    },
+    true,
+  )
+  if (sinConsentimiento.respuesta.status !== 400) {
+    throw new Error('Se permitió registrarse sin aceptar el aviso.')
+  }
+
+  await db.execute(
+    'UPDATE pacientes SET consentimiento_fecha = NULL WHERE id_usuario = ?',
+    [idUsuario],
+  )
+  const pendiente = await solicitud('/paciente/perfil')
+  if (pendiente.datos.paciente.consentimientoFecha) {
+    throw new Error('El consentimiento pendiente no se detectó.')
+  }
+  const aceptado = await solicitud('/paciente/consentimiento', { method: 'POST' })
+  if (!aceptado.datos.consentimientoFecha) {
+    throw new Error('No se registró el consentimiento pendiente.')
+  }
+
+  const salud = await fetch(`${apiUrl}/salud`)
+  if (salud.headers.get('x-content-type-options') !== 'nosniff') {
+    throw new Error('Faltan las cabeceras de seguridad.')
+  }
+  if (salud.headers.has('x-powered-by')) {
+    throw new Error('El servidor expone su tecnología.')
   }
 
   const recuperacion = await solicitud('/auth/solicitar-recuperacion', {

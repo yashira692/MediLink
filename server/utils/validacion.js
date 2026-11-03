@@ -1,5 +1,7 @@
 const FORMATO_FECHA = /^\d{4}-\d{2}-\d{2}$/
 
+export const VERSION_AVISO_PRIVACIDAD = '2026-11'
+
 export function fechaValida(fecha) {
   if (!FORMATO_FECHA.test(fecha || '')) return false
 

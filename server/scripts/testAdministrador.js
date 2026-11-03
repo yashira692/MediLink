@@ -47,6 +47,10 @@ const db = await mysql.createConnection({
   dateStrings: true,
 })
 
+const [[{ ultimoRegistro }]] = await db.execute(
+  'SELECT COALESCE(MAX(id_bitacora), 0) AS ultimoRegistro FROM bitacora_accesos',
+)
+
 try {
   const sesion = await exito(
     '/auth/login',
@@ -66,6 +70,7 @@ try {
       correo: correoPaciente,
       telefono: '900333444',
       password: 'Prueba2026!',
+      aceptaPrivacidad: true,
     }),
   )
   const tokenPaciente = registro.token
@@ -181,6 +186,9 @@ try {
   comprobar(horarios.length > 0, 'El médico creado no tiene horarios.')
 
   const mes = fecha.slice(0, 7)
+  const [[{ hoy }]] = await db.execute(
+    "SELECT DATE_FORMAT(CURDATE(), '%Y-%m-%d') AS hoy",
+  )
   const antes = await exito(`/admin/dashboard?mes=${mes}`, token)
   const reserva = await exito(
     '/citas',
@@ -246,6 +254,21 @@ try {
   )
   comprobar(exportarPaciente.status === 403, 'Un paciente exportó un reporte.')
 
+  // Bitácora
+  const bitacora = await exito(`/admin/bitacora?desde=${hoy}&hasta=${hoy}`, token)
+  comprobar(
+    bitacora.registros.some((registro) => registro.accion === 'exportar_reporte'),
+    'La bitácora no registró la exportación.',
+  )
+  comprobar(
+    (await solicitud(`/admin/bitacora?desde=${hoy}&hasta=${hoy}`, sesionEmily.token)).status === 403,
+    'Un médico accedió a la bitácora.',
+  )
+  comprobar(
+    (await solicitud('/admin/bitacora?desde=x&hasta=y', token)).status === 400,
+    'Se aceptó un período inválido en la bitácora.',
+  )
+
   // Desactivación
   const especialidadOcupada = await solicitud(
     `/admin/especialidades/${idEspecialidad}/estado`,
@@ -309,6 +332,9 @@ try {
     'Login, permisos, médicos, especialidades, dashboard, reportes y exportación del administrador: correctos.',
   )
 } finally {
+  await db.execute('DELETE FROM bitacora_accesos WHERE id_bitacora > ?', [
+    ultimoRegistro,
+  ])
   if (idPaciente) {
     await db.execute('DELETE FROM notificaciones WHERE id_paciente = ?', [idPaciente])
     await db.execute('DELETE FROM citas WHERE id_paciente = ?', [idPaciente])

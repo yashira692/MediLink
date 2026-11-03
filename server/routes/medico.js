@@ -5,6 +5,7 @@ import { Router } from 'express'
 import multer from 'multer'
 import pool from '../config/db.js'
 import { autenticar, soloMedicos } from '../middleware/auth.js'
+import { registrarAcceso } from '../services/bitacora.js'
 import { crearNotificacionConCanales } from '../services/canalesNotificacion.js'
 import {
   fechaHoraFutura,
@@ -276,6 +277,11 @@ router.patch('/citas/:id/aprobar', async (req, res, next) => {
       telefono: cita.telefono,
       asunto: 'Cita confirmada en MediLink',
     })
+    await registrarAcceso(connection, req, {
+      accion: 'aprobar_cita',
+      idPaciente: cita.idPaciente,
+      detalle: `Cita ${cita.id}`,
+    })
     await connection.commit()
 
     return res.json({ mensaje: 'Cita confirmada correctamente.' })
@@ -327,6 +333,11 @@ router.patch('/citas/:id/cancelar', async (req, res, next) => {
       correo: cita.correo,
       telefono: cita.telefono,
       asunto: 'Cita cancelada en MediLink',
+    })
+    await registrarAcceso(connection, req, {
+      accion: 'cancelar_cita',
+      idPaciente: cita.idPaciente,
+      detalle: `Cita ${cita.id}`,
     })
     await connection.commit()
 
@@ -395,6 +406,11 @@ router.put('/citas/:id/reprogramar', async (req, res, next) => {
       correo: cita.correo,
       telefono: cita.telefono,
       asunto: 'Cita reprogramada en MediLink',
+    })
+    await registrarAcceso(connection, req, {
+      accion: 'reprogramar_cita',
+      idPaciente: cita.idPaciente,
+      detalle: `Cita ${cita.id}`,
     })
     await connection.commit()
 
@@ -572,6 +588,11 @@ router.post('/citas/:id/consulta', async (req, res, next) => {
       telefono: cita.telefono,
       asunto: 'Consulta registrada en MediLink',
     })
+    await registrarAcceso(connection, req, {
+      accion: 'registrar_consulta',
+      idPaciente: cita.idPaciente,
+      detalle: `Cita ${cita.id}`,
+    })
     await connection.commit()
 
     return res.status(201).json({
@@ -634,6 +655,8 @@ router.get('/pacientes/:id/historial', async (req, res, next) => {
        WHERE p.id_paciente = ?`,
       [idPaciente],
     )
+
+    await registrarAcceso(pool, req, { accion: 'ver_historial', idPaciente })
 
     return res.json({
       paciente,
@@ -781,6 +804,11 @@ router.post('/pacientes/:id/documentos', recibirArchivo, async (req, res, next) 
       telefono: contacto.telefono,
       asunto: 'Nuevo documento en MediLink',
     })
+    await registrarAcceso(connection, req, {
+      accion: 'subir_documento',
+      idPaciente,
+      detalle: `Tipo: ${tipo}`,
+    })
     await connection.commit()
 
     return res.status(201).json({ mensaje: 'Documento subido correctamente.' })
@@ -796,7 +824,12 @@ router.post('/pacientes/:id/documentos', recibirArchivo, async (req, res, next) 
 router.get('/documentos/:id/descargar', async (req, res, next) => {
   try {
     const [documentos] = await pool.execute(
-      `SELECT d.nombre_original, d.ruta_relativa, d.mime_type
+      `SELECT
+        d.id_paciente,
+        d.tipo,
+        d.nombre_original,
+        d.ruta_relativa,
+        d.mime_type
        FROM documentos_medicos d
        WHERE d.id_documento = ?
          AND EXISTS (
@@ -811,6 +844,12 @@ router.get('/documentos/:id/descargar', async (req, res, next) => {
     if (!documento) {
       return res.status(404).json({ mensaje: 'Documento no encontrado.' })
     }
+
+    await registrarAcceso(pool, req, {
+      accion: 'descargar_documento',
+      idPaciente: documento.id_paciente,
+      detalle: `Documento ${Number(req.params.id)} (${documento.tipo})`,
+    })
 
     return enviarDocumento(res, documento)
   } catch (error) {

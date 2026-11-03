@@ -146,6 +146,22 @@ MediLink conserva el motor local como respaldo. Las emergencias y solicitudes
 de diagnóstico, medicación o dosis se interceptan localmente antes de consultar
 Dialogflow.
 
+## Privacidad y bitácora
+
+- Registrarse exige aceptar el aviso de privacidad; se guarda la fecha y la
+  versión. Las cuentas anteriores lo ven al iniciar sesión.
+- La bitácora guarda qué hicieron médicos y administradores con datos de
+  pacientes: ver historiales, descargar y subir documentos, registrar consultas,
+  cambiar citas y generar reportes. El administrador la consulta en su panel.
+  No hay rutas para editarla ni borrarla.
+- La API usa `helmet` y límites de solicitudes: 600 por minuto en general y 100
+  cada 15 minutos en autenticación.
+
+Para usar datos reales de pacientes aún hace falta HTTPS, cifrado de la base y
+de `storage/`, respaldos, un usuario de MySQL con permisos limitados, cambiar
+las contraseñas de demostración, `NODE_ENV=production` y revisión legal del
+aviso según la Ley 29733.
+
 ## Seguridad de la cuenta
 
 - Las contraseñas requieren al menos 8 caracteres, una mayúscula, una minúscula

@@ -45,6 +45,7 @@ try {
       correo,
       telefono: '944444444',
       password: 'Prueba2026!',
+      aceptaPrivacidad: true,
     }),
   })
   token = registro.token

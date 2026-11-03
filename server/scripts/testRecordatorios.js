@@ -39,6 +39,7 @@ try {
       correo,
       telefono: '900111222',
       password: 'Recordatorio2026',
+      aceptaPrivacidad: true,
     }),
   })
   token = registro.token

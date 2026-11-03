@@ -234,6 +234,39 @@ try {
     )`,
   )
 
+  const [columnasConsentimiento] = await connection.execute(
+    `SELECT COLUMN_NAME
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'pacientes'
+       AND COLUMN_NAME = 'consentimiento_fecha'`,
+    [process.env.DB_NAME],
+  )
+
+  if (columnasConsentimiento.length === 0) {
+    await connection.query(
+      `ALTER TABLE pacientes
+       ADD COLUMN consentimiento_fecha DATETIME NULL AFTER direccion,
+       ADD COLUMN consentimiento_version VARCHAR(20) NULL
+         AFTER consentimiento_fecha`,
+    )
+  }
+
+  await connection.query(
+    `CREATE TABLE IF NOT EXISTS bitacora_accesos (
+      id_bitacora BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      id_usuario INT UNSIGNED NOT NULL,
+      usuario VARCHAR(201) NOT NULL,
+      rol VARCHAR(20) NOT NULL,
+      accion VARCHAR(50) NOT NULL,
+      id_paciente INT UNSIGNED NULL,
+      detalle VARCHAR(255) NULL,
+      ip VARCHAR(45) NULL,
+      fecha TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_bitacora_fecha (fecha),
+      INDEX idx_bitacora_paciente (id_paciente)
+    )`,
+  )
+
   for (const [nombre, descripcion] of especialidades) {
     await connection.execute(
       `INSERT INTO especialidades (nombre, descripcion, estado)

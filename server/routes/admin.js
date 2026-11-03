@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs'
 import { Router } from 'express'
 import pool from '../config/db.js'
 import { autenticar, soloAdministradores } from '../middleware/auth.js'
+import { registrarAcceso } from '../services/bitacora.js'
 import { enviarReporteExcel, enviarReportePdf } from '../utils/reportes.js'
 import { fechaValida, passwordSegura } from '../utils/validacion.js'
 
@@ -525,6 +526,11 @@ router.get('/reportes', async (req, res, next) => {
   }
 
   try {
+    await registrarAcceso(pool, req, {
+      accion: 'ver_reporte',
+      detalle: `${filtros.desde} al ${filtros.hasta}`,
+    })
+
     return res.json(await obtenerReporte(filtros))
   } catch (error) {
     return next(error)
@@ -567,6 +573,11 @@ router.get('/reportes/exportar', async (req, res, next) => {
     }
     const nombreBase = `reporte-citas-${filtros.desde}-a-${filtros.hasta}`
 
+    await registrarAcceso(pool, req, {
+      accion: 'exportar_reporte',
+      detalle: `${formato}: ${filtros.desde} al ${filtros.hasta}`,
+    })
+
     if (formato === 'pdf') {
       res.attachment(`${nombreBase}.pdf`)
       return enviarReportePdf(res, datos)
@@ -574,6 +585,39 @@ router.get('/reportes/exportar', async (req, res, next) => {
 
     res.attachment(`${nombreBase}.xlsx`)
     return await enviarReporteExcel(res, datos)
+  } catch (error) {
+    return next(error)
+  }
+})
+
+router.get('/bitacora', async (req, res, next) => {
+  const { desde, hasta } = req.query
+
+  if (!fechaValida(desde) || !fechaValida(hasta) || desde > hasta) {
+    return res.status(400).json({ mensaje: 'Indica un período válido.' })
+  }
+
+  try {
+    const [registros] = await pool.execute(
+      `SELECT
+        b.id_bitacora AS id,
+        DATE_FORMAT(b.fecha, '%Y-%m-%dT%H:%i:%s') AS fecha,
+        b.usuario,
+        b.rol,
+        b.accion,
+        b.detalle,
+        b.ip,
+        CONCAT(u.nombres, ' ', u.apellidos) AS paciente
+       FROM bitacora_accesos b
+       LEFT JOIN pacientes p ON p.id_paciente = b.id_paciente
+       LEFT JOIN usuarios u ON u.id_usuario = p.id_usuario
+       WHERE b.fecha BETWEEN ? AND ?
+       ORDER BY b.id_bitacora DESC
+       LIMIT 500`,
+      [`${desde} 00:00:00`, `${hasta} 23:59:59`],
+    )
+
+    return res.json({ registros })
   } catch (error) {
     return next(error)
   }

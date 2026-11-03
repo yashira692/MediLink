@@ -84,6 +84,15 @@ function obtenerTransportadorCorreo() {
   return transportadorCorreo
 }
 
+function escaparHtml(texto) {
+  return String(texto)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+}
+
 async function enviarCorreo(destino, asunto, mensaje) {
   if (!correoConfigurado()) {
     return {
@@ -100,7 +109,7 @@ async function enviarCorreo(destino, asunto, mensaje) {
     html: `
       <div style="font-family: Arial, sans-serif; color: #0b2d52; line-height: 1.5;">
         <h2 style="color: #2f7fc1;">MediLink</h2>
-        <p>${mensaje}</p>
+        <p>${escaparHtml(mensaje)}</p>
         <p style="font-size: 13px; color: #5f718f;">Este mensaje fue generado automáticamente por MediLink.</p>
       </div>
     `,

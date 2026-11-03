@@ -51,6 +51,10 @@ const db = await mysql.createConnection({
   dateStrings: true,
 })
 
+const [[{ ultimoRegistro }]] = await db.execute(
+  'SELECT COALESCE(MAX(id_bitacora), 0) AS ultimoRegistro FROM bitacora_accesos',
+)
+
 try {
   const registro = await exito('/auth/registro', null, {
     method: 'POST',
@@ -61,6 +65,7 @@ try {
       correo,
       telefono: '900222333',
       password: 'Prueba2026!',
+      aceptaPrivacidad: true,
     }),
   })
   const tokenPaciente = registro.token
@@ -411,10 +416,35 @@ try {
     'El paciente no recibió el aviso del documento.',
   )
 
+  const [registrosBitacora] = await db.execute(
+    `SELECT accion, usuario FROM bitacora_accesos
+     WHERE id_bitacora > ? AND id_paciente = ?`,
+    [ultimoRegistro, idPaciente],
+  )
+  const acciones = new Set(registrosBitacora.map((registro) => registro.accion))
+  for (const accion of [
+    'aprobar_cita',
+    'reprogramar_cita',
+    'cancelar_cita',
+    'registrar_consulta',
+    'ver_historial',
+    'descargar_documento',
+    'subir_documento',
+  ]) {
+    comprobar(acciones.has(accion), `La bitácora no registró ${accion}.`)
+  }
+  comprobar(
+    registrosBitacora.every((registro) => registro.usuario === 'Emily Roberts'),
+    'La bitácora atribuyó una acción a otro usuario.',
+  )
+
   console.log(
     'Login, agenda, aprobación, reprogramación, cancelación, consulta, receta, subida de PDF y permisos del médico: correctos.',
   )
 } finally {
+  await db.execute('DELETE FROM bitacora_accesos WHERE id_bitacora > ?', [
+    ultimoRegistro,
+  ])
   if (idPaciente) {
     await db.execute('DELETE FROM documentos_medicos WHERE id_paciente = ?', [idPaciente])
     await db.execute(

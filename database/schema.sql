@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS pacientes (
   id_usuario INT UNSIGNED NOT NULL UNIQUE,
   fecha_nacimiento DATE NULL,
   direccion VARCHAR(255) NULL,
+  consentimiento_fecha DATETIME NULL,
+  consentimiento_version VARCHAR(20) NULL,
   CONSTRAINT fk_pacientes_usuario
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
     ON DELETE CASCADE
@@ -226,6 +228,20 @@ CREATE TABLE IF NOT EXISTS chatbot_consultas (
   CONSTRAINT fk_chatbot_usuario
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
     ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS bitacora_accesos (
+  id_bitacora BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  id_usuario INT UNSIGNED NOT NULL,
+  usuario VARCHAR(201) NOT NULL,
+  rol VARCHAR(20) NOT NULL,
+  accion VARCHAR(50) NOT NULL,
+  id_paciente INT UNSIGNED NULL,
+  detalle VARCHAR(255) NULL,
+  ip VARCHAR(45) NULL,
+  fecha TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_bitacora_fecha (fecha),
+  INDEX idx_bitacora_paciente (id_paciente)
 );
 
 CREATE TABLE IF NOT EXISTS recuperacion_password (

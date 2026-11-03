@@ -1,6 +1,8 @@
 import 'dotenv/config'
 import cors from 'cors'
 import express from 'express'
+import rateLimit from 'express-rate-limit'
+import helmet from 'helmet'
 import { verificarConexion } from './config/db.js'
 import adminRoutes from './routes/admin.js'
 import asistenteRoutes from './routes/asistente.js'
@@ -15,6 +17,20 @@ import { generarRecordatorios } from './services/recordatorios.js'
 const app = express()
 const port = Number(process.env.PORT || 3001)
 
+function limiteSolicitudes(ventanaMinutos, limite) {
+  return rateLimit({
+    windowMs: ventanaMinutos * 60 * 1000,
+    limit: limite,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: {
+      mensaje: 'Demasiadas solicitudes. Inténtalo nuevamente en unos minutos.',
+    },
+  })
+}
+
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }))
+
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
 }))
@@ -24,7 +40,8 @@ app.get('/api/salud', (_req, res) => {
   res.json({ estado: 'ok', servicio: 'MediLink API' })
 })
 
-app.use('/api/auth', authRoutes)
+app.use('/api', limiteSolicitudes(1, 600))
+app.use('/api/auth', limiteSolicitudes(15, 100), authRoutes)
 app.use('/api/asistente', asistenteRoutes)
 app.use('/api/paciente', pacienteRoutes)
 app.use('/api/citas', citasRoutes)
@@ -41,6 +58,11 @@ app.use((error, _req, res, _next) => {
 if (!process.env.JWT_SECRET) {
   console.error('Falta configurar JWT_SECRET en el archivo .env.')
   process.exit(1)
+}
+
+if (process.env.JWT_SECRET.length < 32) {
+  console.error('JWT_SECRET debe tener al menos 32 caracteres.')
+  if (process.env.NODE_ENV === 'production') process.exit(1)
 }
 
 try {

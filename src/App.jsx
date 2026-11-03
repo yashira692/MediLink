@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
+import { PantallaConsentimiento, TextoAvisoPrivacidad } from './AvisoPrivacidad.jsx'
 import HistorialMedico from './HistorialMedico.jsx'
 import PanelAdministrador from './PanelAdministrador.jsx'
 import PanelMedico from './PanelMedico.jsx'
@@ -232,6 +233,11 @@ function App() {
     return datos
   }
 
+  async function aceptarConsentimiento() {
+    const datos = await api('/paciente/consentimiento', { method: 'POST' })
+    setPaciente({ ...paciente, ...datos })
+  }
+
   async function marcarNotificacionLeida(id) {
     try {
       await api(`/notificaciones/${id}/leer`, { method: 'PATCH' })
@@ -349,6 +355,22 @@ function App() {
           />
         )}
         {modalConfirmacion}
+        {aviso && (
+          <div className={`app-toast ${aviso.tipo}`} role="status">
+            {aviso.mensaje}
+          </div>
+        )}
+      </>
+    )
+  }
+
+  if (paciente && !paciente.consentimientoFecha) {
+    return (
+      <>
+        <PantallaConsentimiento
+          aceptar={aceptarConsentimiento}
+          cerrarSesion={cerrarSesion}
+        />
         {aviso && (
           <div className={`app-toast ${aviso.tipo}`} role="status">
             {aviso.mensaje}
@@ -1158,6 +1180,7 @@ function LoginRegistro({ iniciarSesion, registrarPaciente }) {
     direccion: '',
     password: '',
     confirmarPassword: '',
+    aceptaPrivacidad: false,
   })
 
   function actualizarCampo(campo, valor) {
@@ -1192,6 +1215,11 @@ function LoginRegistro({ iniciarSesion, registrarPaciente }) {
       !formulario.password
     ) {
       alert('Completa los campos obligatorios.')
+      return
+    }
+
+    if (!formulario.aceptaPrivacidad) {
+      alert('Debes aceptar el aviso de privacidad para registrarte.')
       return
     }
 
@@ -1364,6 +1392,26 @@ function LoginRegistro({ iniciarSesion, registrarPaciente }) {
             <p className="password-help">
               Mínimo 8 caracteres, mayúscula, minúscula y número.
             </p>
+          )}
+
+          {modo === 'registro' && (
+            <>
+              <details className="aviso-detalle">
+                <summary>Leer aviso de privacidad</summary>
+                <TextoAvisoPrivacidad />
+              </details>
+
+              <label className="consentimiento">
+                <input
+                  type="checkbox"
+                  checked={formulario.aceptaPrivacidad}
+                  onChange={(e) =>
+                    actualizarCampo('aceptaPrivacidad', e.target.checked)
+                  }
+                />
+                <span>He leído el aviso y autorizo el tratamiento de mis datos.</span>
+              </label>
+            </>
           )}
 
           <button type="submit" disabled={enviando}>

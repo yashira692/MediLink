@@ -4,7 +4,10 @@ import crypto from 'node:crypto'
 import jwt from 'jsonwebtoken'
 import pool from '../config/db.js'
 import { crearNotificacionConCanales } from '../services/canalesNotificacion.js'
-import { passwordSegura } from '../utils/validacion.js'
+import {
+  passwordSegura,
+  VERSION_AVISO_PRIVACIDAD,
+} from '../utils/validacion.js'
 
 const router = Router()
 const intentosLogin = new Map()
@@ -41,6 +44,7 @@ function pacientePublico(usuario) {
     telefono: usuario.telefono,
     fechaNacimiento: usuario.fecha_nacimiento,
     direccion: usuario.direccion,
+    consentimientoFecha: usuario.consentimiento_fecha,
     rol: usuario.rol,
   }
 }
@@ -130,6 +134,12 @@ router.post('/registro', async (req, res, next) => {
     })
   }
 
+  if (req.body.aceptaPrivacidad !== true) {
+    return res.status(400).json({
+      mensaje: 'Debes aceptar el aviso de privacidad para registrarte.',
+    })
+  }
+
   let connection
 
   try {
@@ -155,9 +165,16 @@ router.post('/registro', async (req, res, next) => {
     )
 
     const [pacienteResult] = await connection.execute(
-      `INSERT INTO pacientes (id_usuario, fecha_nacimiento, direccion)
-       VALUES (?, ?, ?)`,
-      [usuarioResult.insertId, fechaNacimiento, direccion],
+      `INSERT INTO pacientes
+        (id_usuario, fecha_nacimiento, direccion, consentimiento_fecha,
+         consentimiento_version)
+       VALUES (?, ?, ?, NOW(), ?)`,
+      [
+        usuarioResult.insertId,
+        fechaNacimiento,
+        direccion,
+        VERSION_AVISO_PRIVACIDAD,
+      ],
     )
     await crearNotificacionConCanales(connection, {
       idPaciente: pacienteResult.insertId,
@@ -180,6 +197,7 @@ router.post('/registro', async (req, res, next) => {
       telefono,
       fecha_nacimiento: fechaNacimiento,
       direccion,
+      consentimiento_fecha: new Date().toISOString(),
       rol: 'paciente',
       token_version: 0,
     }
@@ -220,6 +238,7 @@ router.post('/login', async (req, res, next) => {
         p.id_paciente,
         p.fecha_nacimiento,
         p.direccion,
+        p.consentimiento_fecha,
         m.id_medico,
         m.cmp,
         e.nombre AS especialidad

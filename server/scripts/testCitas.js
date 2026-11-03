@@ -43,6 +43,7 @@ try {
       correo,
       telefono: '999999999',
       password: 'Prueba2026!',
+      aceptaPrivacidad: true,
     }),
   })
   token = registro.token
