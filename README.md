@@ -53,8 +53,9 @@ Express y persistencia MySQL.
 - `src/`: interfaz React.
 - `server/`: API REST con Express y autenticación JWT.
 - `database/schema.sql`: estructura inicial de MySQL.
-- `storage/medical-documents/`: PDFs médicos privados, fuera de Git y de la
-  carpeta pública del frontend.
+- Los PDF médicos se guardan en MySQL (`documentos_medicos.contenido`), fuera de
+  Git y de la carpeta pública del frontend. Los de instalaciones anteriores pueden
+  seguir en `storage/medical-documents/`.
 
 El archivo `.env` contiene información privada y no se incluye en Git.
 
@@ -71,7 +72,7 @@ lleva a su panel según el rol. Desde allí pueden:
 - Subir un PDF de hasta 10 MB al historial del paciente: un resultado de
   laboratorio, o el informe o la receta de una consulta propia. El paciente
   recibe un aviso. Si ya había un informe o receta, descarga el PDF más reciente.
-  Los archivos se guardan en `storage/`, que no pasa a otro equipo con Git.
+  Los archivos se guardan en la base de datos.
 
 `npm.cmd run db:setup` crea cuatro médicos de demostración, por ejemplo
 `emily.roberts@medilink.pe`, con la contraseña `Medilink2026!`. Son solo para
@@ -163,10 +164,29 @@ Dialogflow.
 - La API usa `helmet` y límites de solicitudes: 600 por minuto en general y 100
   cada 15 minutos en autenticación.
 
-Para usar datos reales de pacientes aún hace falta HTTPS, cifrado de la base y
-de `storage/`, respaldos, un usuario de MySQL con permisos limitados, cambiar
+Para usar datos reales de pacientes aún hace falta HTTPS, cifrado de la base,
+respaldos, un usuario de MySQL con permisos limitados, cambiar
 las contraseñas de demostración, `NODE_ENV=production` y revisión legal del
 aviso según la Ley 29733.
+
+## Despliegue de demostración (Render + Aiven)
+
+La app se publica como un solo servicio web de Render, que sirve la API y el
+frontend, con MySQL en Aiven. Ambos en plan gratuito y solo con datos ficticios.
+
+- Build: `npm ci --include=dev && npm run build:render`
+- Start: `npm start`
+- Variables: `NODE_ENV=production`, `TZ=America/Lima`, `DB_TIME_ZONE=-05:00`,
+  `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL_CA`,
+  `JWT_SECRET`, `DEMO_PASSWORD`, `DEMO_DATA=true`,
+  `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `NOTIFICATION_EMAIL_ENABLED=true`,
+  `NOTIFICATION_WHATSAPP_ENABLED=false`.
+
+Limitaciones del plan gratuito: el servicio se duerme tras 15 minutos sin uso y
+tarda cerca de un minuto en despertar. Render bloquea el correo por SMTP, por lo
+que los correos salen por la API de Brevo. Las cuentas `@medilink.test` y
+`@medilink.pe` son ficticias y no reciben correos: la recuperación de contraseña
+se demuestra con una cuenta registrada con un correo real.
 
 ## Seguridad de la cuenta
 

@@ -21,7 +21,7 @@ router.get('/', async (req, res, next) => {
 router.get('/documentos/:id/descargar', async (req, res, next) => {
   try {
     const [documentos] = await pool.execute(
-      `SELECT nombre_original, ruta_relativa, mime_type
+      `SELECT nombre_original, ruta_relativa, contenido, mime_type
        FROM documentos_medicos
        WHERE id_documento = ? AND id_paciente = ?
        LIMIT 1`,

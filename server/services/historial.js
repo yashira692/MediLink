@@ -116,6 +116,21 @@ export async function obtenerHistorialPaciente(idPaciente) {
 }
 
 export function enviarDocumento(res, documento) {
+  if (documento.contenido) {
+    // En UTF-8 explícito: res.send corrompe las tildes y la ñ de res.attachment.
+    res.set(
+      'Content-Disposition',
+      `attachment; filename*=UTF-8''${encodeURIComponent(documento.nombre_original)}`,
+    )
+    res.type(documento.mime_type)
+    return res.send(documento.contenido)
+  }
+
+  // Documentos antiguos que siguen en el disco de una instalación local.
+  if (!documento.ruta_relativa) {
+    return res.status(404).json({ mensaje: 'El archivo ya no está disponible.' })
+  }
+
   const ruta = path.resolve(storageRoot, documento.ruta_relativa)
   const rutaPermitida = `${storageRoot}${path.sep}`
 

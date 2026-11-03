@@ -2,6 +2,8 @@ import nodemailer from 'nodemailer'
 
 const CODIGO_PAIS_PERU = process.env.WHATSAPP_COUNTRY_CODE || '51'
 const WHATSAPP_API_VERSION = process.env.WHATSAPP_API_VERSION || 'v20.0'
+// Cuentas ficticias de demostración: sus buzones no existen o no son nuestros.
+const CORREO_DEMOSTRACION = /@medilink\.(test|pe)$/i
 let transportadorCorreo = null
 
 function canalActivo(canal) {
@@ -65,6 +67,13 @@ function correoConfigurado() {
   )
 }
 
+function brevoConfigurado() {
+  return (
+    valorConfigurado(process.env.BREVO_API_KEY) &&
+    valorConfigurado(process.env.BREVO_SENDER_EMAIL)
+  )
+}
+
 function obtenerTransportadorCorreo() {
   if (transportadorCorreo) return transportadorCorreo
 
@@ -93,11 +102,61 @@ function escaparHtml(texto) {
     .replaceAll("'", '&#39;')
 }
 
-async function enviarCorreo(destino, asunto, mensaje) {
+function crearHtmlCorreo(mensaje, enlace) {
+  return `
+      <div style="font-family: Arial, sans-serif; color: #0b2d52; line-height: 1.5;">
+        <h2 style="color: #2f7fc1;">MediLink</h2>
+        <p>${escaparHtml(mensaje)}</p>
+        ${enlace ? `<p><a href="${escaparHtml(enlace)}">Restablecer contraseña</a></p>` : ''}
+        <p style="font-size: 13px; color: #5f718f;">Este mensaje fue generado automáticamente por MediLink.</p>
+      </div>
+    `
+}
+
+// Render gratuito bloquea SMTP; Brevo recibe el correo por HTTPS.
+async function enviarCorreoBrevo(destino, asunto, texto, html) {
+  const respuesta = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': process.env.BREVO_API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { name: 'MediLink', email: process.env.BREVO_SENDER_EMAIL },
+      to: [{ email: destino }],
+      subject: asunto,
+      textContent: texto,
+      htmlContent: html,
+    }),
+    signal: AbortSignal.timeout(15000),
+  })
+
+  if (!respuesta.ok) {
+    const detalle = await respuesta.text()
+    throw new Error(detalle.slice(0, 450))
+  }
+}
+
+export async function enviarCorreo(destino, asunto, mensaje, enlace = null) {
+  if (CORREO_DEMOSTRACION.test(destino)) {
+    return {
+      estado: 'preparado',
+      error: 'Cuenta de demostración sin buzón real',
+    }
+  }
+
+  const texto = enlace ? `${mensaje}\n\n${enlace}` : mensaje
+  const html = crearHtmlCorreo(mensaje, enlace)
+
+  if (brevoConfigurado()) {
+    await enviarCorreoBrevo(destino, asunto, texto, html)
+    return { estado: 'enviado', error: null }
+  }
+
   if (!correoConfigurado()) {
     return {
       estado: 'preparado',
-      error: 'SMTP no configurado en .env',
+      error: 'Correo no configurado en .env',
     }
   }
 
@@ -105,14 +164,8 @@ async function enviarCorreo(destino, asunto, mensaje) {
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to: destino,
     subject: asunto,
-    text: mensaje,
-    html: `
-      <div style="font-family: Arial, sans-serif; color: #0b2d52; line-height: 1.5;">
-        <h2 style="color: #2f7fc1;">MediLink</h2>
-        <p>${escaparHtml(mensaje)}</p>
-        <p style="font-size: 13px; color: #5f718f;">Este mensaje fue generado automáticamente por MediLink.</p>
-      </div>
-    `,
+    text: texto,
+    html,
   })
 
   return { estado: 'enviado', error: null }

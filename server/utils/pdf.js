@@ -1,17 +1,12 @@
-import fs from 'node:fs'
-import path from 'node:path'
 import PDFDocument from 'pdfkit'
 
-export async function crearPdfMedico({
-  ruta,
+export function crearPdfMedico({
   titulo,
   paciente,
   medico,
   fecha,
   secciones,
 }) {
-  await fs.promises.mkdir(path.dirname(ruta), { recursive: true })
-
   return new Promise((resolve, reject) => {
     const documento = new PDFDocument({
       size: 'A4',
@@ -21,9 +16,11 @@ export async function crearPdfMedico({
         Author: 'MediLink',
       },
     })
-    const salida = fs.createWriteStream(ruta)
+    const partes = []
 
-    documento.pipe(salida)
+    documento.on('data', (parte) => partes.push(parte))
+    documento.on('end', () => resolve(Buffer.concat(partes)))
+    documento.on('error', reject)
     documento
       .fontSize(22)
       .fillColor('#2f7fc1')
@@ -62,16 +59,5 @@ export async function crearPdfMedico({
         { align: 'center' },
       )
     documento.end()
-
-    salida.on('finish', async () => {
-      try {
-        const estadisticas = await fs.promises.stat(ruta)
-        resolve(estadisticas.size)
-      } catch (error) {
-        reject(error)
-      }
-    })
-    salida.on('error', reject)
-    documento.on('error', reject)
   })
 }

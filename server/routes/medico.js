@@ -1,6 +1,4 @@
 import crypto from 'node:crypto'
-import fs from 'node:fs'
-import path from 'node:path'
 import { Router } from 'express'
 import multer from 'multer'
 import pool from '../config/db.js'
@@ -15,7 +13,6 @@ import {
 import {
   enviarDocumento,
   obtenerHistorialPaciente,
-  storageRoot,
 } from '../services/historial.js'
 import { crearPdfMedico } from '../utils/pdf.js'
 import { fechaValida } from '../utils/validacion.js'
@@ -131,11 +128,11 @@ function validarMedicamentos(medicamentos) {
   return validos ? limpios : null
 }
 
-async function registrarDocumento(connection, datos, rutaRelativa, tamano) {
+async function registrarDocumento(connection, datos, contenido) {
   await connection.execute(
     `INSERT INTO documentos_medicos
       (id_paciente, id_historial, id_receta, id_resultado, tipo,
-       nombre_original, nombre_archivo, ruta_relativa, mime_type, tamano_bytes)
+       nombre_original, nombre_archivo, contenido, mime_type, tamano_bytes)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'application/pdf', ?)`,
     [
       datos.idPaciente,
@@ -145,16 +142,14 @@ async function registrarDocumento(connection, datos, rutaRelativa, tamano) {
       datos.tipo,
       datos.nombreOriginal,
       datos.nombreArchivo,
-      rutaRelativa.replaceAll('\\', '/'),
-      tamano,
+      contenido,
+      contenido.length,
     ],
   )
 }
 
 async function guardarDocumento(connection, datos) {
-  const rutaRelativa = path.join(String(datos.idPaciente), datos.nombreArchivo)
-  const tamano = await crearPdfMedico({
-    ruta: path.join(storageRoot, rutaRelativa),
+  const contenido = await crearPdfMedico({
     titulo: datos.titulo,
     paciente: datos.paciente,
     medico: datos.medico,
@@ -162,7 +157,7 @@ async function guardarDocumento(connection, datos) {
     secciones: datos.secciones,
   })
 
-  await registrarDocumento(connection, datos, rutaRelativa, tamano)
+  await registrarDocumento(connection, datos, contenido)
 }
 
 router.get('/perfil', async (req, res, next) => {
@@ -708,10 +703,7 @@ router.post('/pacientes/:id/documentos', recibirArchivo, async (req, res, next) 
 
   const nombreArchivo =
     `paciente-${idPaciente}-${tipo}-subido-${crypto.randomUUID()}.pdf`
-  const rutaRelativa = path.join(String(idPaciente), nombreArchivo)
-  const rutaAbsoluta = path.join(storageRoot, rutaRelativa)
   let connection
-  let archivoEscrito = false
 
   try {
     if (!(await atiendeAlPaciente(req.usuario.idMedico, idPaciente))) {
@@ -791,10 +783,7 @@ router.post('/pacientes/:id/documentos', recibirArchivo, async (req, res, next) 
       tipoNotificacion = 'receta'
     }
 
-    await fs.promises.mkdir(path.dirname(rutaAbsoluta), { recursive: true })
-    await fs.promises.writeFile(rutaAbsoluta, archivo.buffer)
-    archivoEscrito = true
-    await registrarDocumento(connection, datos, rutaRelativa, archivo.size)
+    await registrarDocumento(connection, datos, archivo.buffer)
 
     const [[contacto]] = await connection.execute(
       `SELECT u.correo, u.telefono
@@ -821,7 +810,6 @@ router.post('/pacientes/:id/documentos', recibirArchivo, async (req, res, next) 
     return res.status(201).json({ mensaje: 'Documento subido correctamente.' })
   } catch (error) {
     if (connection) await connection.rollback()
-    if (archivoEscrito) await fs.promises.rm(rutaAbsoluta, { force: true })
     return next(error)
   } finally {
     connection?.release()
@@ -836,6 +824,7 @@ router.get('/documentos/:id/descargar', async (req, res, next) => {
         d.tipo,
         d.nombre_original,
         d.ruta_relativa,
+        d.contenido,
         d.mime_type
        FROM documentos_medicos d
        WHERE d.id_documento = ?

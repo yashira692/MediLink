@@ -1,17 +1,10 @@
 import 'dotenv/config'
-import fs from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import mysql from 'mysql2/promise'
 import pool from '../config/db.js'
 import { marcarCitasVencidas } from '../services/citasVencidas.js'
 
 const apiUrl = `http://localhost:${process.env.PORT || 3001}/api`
 const correo = `medico.prueba.${Date.now()}@medilink.test`
-const storageRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../../storage/medical-documents',
-)
 let idUsuario
 let idPaciente
 
@@ -484,10 +477,6 @@ try {
     await db.execute('DELETE FROM historial_medico WHERE id_paciente = ?', [idPaciente])
     await db.execute('DELETE FROM notificaciones WHERE id_paciente = ?', [idPaciente])
     await db.execute('DELETE FROM citas WHERE id_paciente = ?', [idPaciente])
-    fs.rmSync(path.join(storageRoot, String(idPaciente)), {
-      recursive: true,
-      force: true,
-    })
   }
   if (idUsuario) {
     await db.execute('DELETE FROM usuarios WHERE id_usuario = ?', [idUsuario])

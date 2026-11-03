@@ -3,6 +3,8 @@ import cors from 'cors'
 import express from 'express'
 import rateLimit from 'express-rate-limit'
 import helmet from 'helmet'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { verificarConexion } from './config/db.js'
 import adminRoutes from './routes/admin.js'
 import asistenteRoutes from './routes/asistente.js'
@@ -17,6 +19,14 @@ import { generarRecordatorios } from './services/recordatorios.js'
 
 const app = express()
 const port = Number(process.env.PORT || 3001)
+const enProduccion = process.env.NODE_ENV === 'production'
+const carpetaFrontend = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../dist',
+)
+
+// Render atiende por un proxy: sin esto, todos los usuarios compartirían la misma IP.
+if (enProduccion) app.set('trust proxy', 1)
 
 function limiteSolicitudes(ventanaMinutos, limite) {
   return rateLimit({
@@ -50,6 +60,16 @@ app.use('/api/historial', historialRoutes)
 app.use('/api/medico', medicoRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/notificaciones', notificacionesRoutes)
+app.use('/api', (_req, res) => {
+  res.status(404).json({ mensaje: 'Ruta no encontrada.' })
+})
+
+if (enProduccion) {
+  app.use(express.static(carpetaFrontend))
+  app.get('/{*ruta}', (_req, res) => {
+    res.sendFile(path.join(carpetaFrontend, 'index.html'))
+  })
+}
 
 app.use((error, _req, res, _next) => {
   console.error(error)

@@ -1,23 +1,32 @@
 import 'dotenv/config'
 import bcrypt from 'bcryptjs'
 import mysql from 'mysql2/promise'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import fs from 'node:fs'
+import { opcionesConexion, zonaHorariaBase } from '../config/db.js'
 import { crearPdfMedico } from '../utils/pdf.js'
+import { VERSION_AVISO_PRIVACIDAD } from '../utils/validacion.js'
 
-const projectRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../..',
-)
-const storageRoot = path.join(projectRoot, 'storage', 'medical-documents')
+// La clave pública del repositorio solo sirve en desarrollo.
+if (process.env.NODE_ENV === 'production' && !process.env.DEMO_PASSWORD) {
+  console.error('Falta configurar DEMO_PASSWORD para preparar la base.')
+  process.exit(1)
+}
 
-const connection = await mysql.createConnection({
-  host: process.env.DB_HOST,
-  port: Number(process.env.DB_PORT || 3306),
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-})
+const passwordDemo = process.env.DEMO_PASSWORD || 'Medilink2026!'
+const connection = await mysql.createConnection(opcionesConexion)
+
+if (zonaHorariaBase) {
+  await connection.query('SET time_zone = ?', [zonaHorariaBase])
+}
+
+// El nombre de la base lo define cada servidor (DB_NAME), no el script.
+const esquema = fs
+  .readFileSync(new URL('../../database/schema.sql', import.meta.url), 'utf8')
+  .replace(/^[\s\S]*?USE medilink;/, '')
+
+for (const sentencia of esquema.split(';')) {
+  if (sentencia.trim()) await connection.query(sentencia)
+}
 
 const medicosIniciales = [
   {
@@ -57,6 +66,49 @@ const medicosIniciales = [
     especialidad: 'Pediatría',
   },
 ]
+
+const pacientesDemo = [
+  {
+    nombres: 'Ana',
+    apellidos: 'Torres Quispe',
+    dni: '40000001',
+    correo: 'ana.torres@medilink.test',
+    telefono: '900100001',
+    citas: [
+      { especialidad: 'Medicina General', dias: 1, hora: '09:00:00', motivo: 'Control general anual', estado: 'confirmada' },
+      { especialidad: 'Pediatría', dias: 9, hora: '11:30:00', motivo: 'Control pediátrico', estado: 'pendiente' },
+    ],
+  },
+  {
+    nombres: 'Carlos',
+    apellidos: 'Mendoza Ríos',
+    dni: '40000002',
+    correo: 'carlos.mendoza@medilink.test',
+    telefono: '900100002',
+    citas: [
+      { especialidad: 'Medicina General', dias: 2, hora: '10:30:00', motivo: 'Dolor de garganta', estado: 'pendiente' },
+      { especialidad: 'Cardiología', dias: 3, hora: '08:30:00', motivo: 'Control de presión arterial', estado: 'pendiente' },
+    ],
+  },
+  {
+    nombres: 'Lucía',
+    apellidos: 'Paredes Vega',
+    dni: '40000003',
+    correo: 'lucia.paredes@medilink.test',
+    telefono: '900100003',
+    citas: [
+      { especialidad: 'Medicina General', dias: 4, hora: '15:00:00', motivo: 'Revisión de exámenes', estado: 'confirmada' },
+    ],
+  },
+]
+
+// Los médicos no atienden domingos.
+function fechaAtencion(dias) {
+  const fecha = new Date()
+  fecha.setDate(fecha.getDate() + dias)
+  if (fecha.getDay() === 0) fecha.setDate(fecha.getDate() + 1)
+  return fecha.toLocaleDateString('en-CA')
+}
 
 const especialidades = [
   ['Medicina General', 'Atención médica general y preventiva.'],
@@ -131,7 +183,8 @@ try {
       tipo ENUM('informe', 'receta', 'resultado') NOT NULL,
       nombre_original VARCHAR(255) NOT NULL,
       nombre_archivo VARCHAR(255) NOT NULL UNIQUE,
-      ruta_relativa VARCHAR(500) NOT NULL,
+      ruta_relativa VARCHAR(500) NULL,
+      contenido MEDIUMBLOB NULL,
       mime_type VARCHAR(100) NOT NULL DEFAULT 'application/pdf',
       tamano_bytes BIGINT UNSIGNED NOT NULL,
       fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -146,6 +199,22 @@ try {
         FOREIGN KEY (id_resultado) REFERENCES resultados_laboratorio(id_resultado)
     )`,
   )
+
+  const [columnaContenido] = await connection.execute(
+    `SELECT COLUMN_NAME
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'documentos_medicos'
+       AND COLUMN_NAME = 'contenido'`,
+    [process.env.DB_NAME],
+  )
+
+  if (columnaContenido.length === 0) {
+    await connection.query(
+      `ALTER TABLE documentos_medicos
+       MODIFY COLUMN ruta_relativa VARCHAR(500) NULL,
+       ADD COLUMN contenido MEDIUMBLOB NULL AFTER ruta_relativa`,
+    )
+  }
 
   const [columnasChatbot] = await connection.execute(
     `SELECT COLUMN_NAME
@@ -283,7 +352,7 @@ try {
     )
   }
 
-  const passwordHash = await bcrypt.hash('Medilink2026!', 12)
+  const passwordHash = await bcrypt.hash(passwordDemo, 12)
 
   for (const medico of medicosIniciales) {
     await connection.execute(
@@ -349,6 +418,73 @@ try {
      ON DUPLICATE KEY UPDATE id_usuario = id_usuario`,
     [passwordHash],
   )
+
+  if (process.env.DEMO_DATA === 'true') {
+    for (const persona of pacientesDemo) {
+      await connection.execute(
+        `INSERT INTO usuarios
+          (nombres, apellidos, dni, correo, telefono, password_hash, rol, estado)
+         VALUES (?, ?, ?, ?, ?, ?, 'paciente', 1)
+         ON DUPLICATE KEY UPDATE id_usuario = id_usuario`,
+        [
+          persona.nombres,
+          persona.apellidos,
+          persona.dni,
+          persona.correo,
+          persona.telefono,
+          passwordHash,
+        ],
+      )
+
+      const [[usuario]] = await connection.execute(
+        'SELECT id_usuario FROM usuarios WHERE dni = ?',
+        [persona.dni],
+      )
+
+      await connection.execute(
+        `INSERT INTO pacientes
+          (id_usuario, consentimiento_fecha, consentimiento_version)
+         VALUES (?, NOW(), ?)
+         ON DUPLICATE KEY UPDATE id_paciente = id_paciente`,
+        [usuario.id_usuario, VERSION_AVISO_PRIVACIDAD],
+      )
+
+      const [[{ id_paciente: idPaciente }]] = await connection.execute(
+        'SELECT id_paciente FROM pacientes WHERE id_usuario = ?',
+        [usuario.id_usuario],
+      )
+      const [citasActivas] = await connection.execute(
+        `SELECT id_cita FROM citas
+         WHERE id_paciente = ? AND fecha >= CURDATE()
+           AND estado IN ('pendiente', 'confirmada', 'reprogramada')
+         LIMIT 1`,
+        [idPaciente],
+      )
+
+      // Cada despliegue repone las citas si las anteriores ya pasaron.
+      if (citasActivas.length === 0) {
+        for (const cita of persona.citas) {
+          await connection.execute(
+            `INSERT IGNORE INTO citas
+              (id_paciente, id_medico, fecha, hora, motivo, estado)
+             SELECT ?, m.id_medico, ?, ?, ?, ?
+             FROM medicos m
+             INNER JOIN especialidades e ON e.id_especialidad = m.id_especialidad
+             WHERE e.nombre = ?
+             LIMIT 1`,
+            [
+              idPaciente,
+              fechaAtencion(cita.dias),
+              cita.hora,
+              cita.motivo,
+              cita.estado,
+              cita.especialidad,
+            ],
+          )
+        }
+      }
+    }
+  }
 
   await connection.commit()
   const [[medicoGeneral]] = await connection.execute(
@@ -528,13 +664,7 @@ try {
     ]
 
     for (const documento of documentos) {
-      const rutaRelativa = path.join(
-        String(paciente.id_paciente),
-        documento.nombreArchivo,
-      )
-      const rutaAbsoluta = path.join(storageRoot, rutaRelativa)
-      const tamano = await crearPdfMedico({
-        ruta: rutaAbsoluta,
+      const contenido = await crearPdfMedico({
         titulo: documento.titulo,
         paciente: paciente.nombre,
         medico: medicoGeneral.nombre,
@@ -545,12 +675,13 @@ try {
       await connection.execute(
         `INSERT INTO documentos_medicos
           (id_paciente, id_historial, id_receta, id_resultado, tipo,
-           nombre_original, nombre_archivo, ruta_relativa, mime_type,
+           nombre_original, nombre_archivo, contenido, mime_type,
            tamano_bytes)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'application/pdf', ?)
          ON DUPLICATE KEY UPDATE
            nombre_original = VALUES(nombre_original),
-           ruta_relativa = VALUES(ruta_relativa),
+           contenido = VALUES(contenido),
+           ruta_relativa = NULL,
            tamano_bytes = VALUES(tamano_bytes)`,
         [
           paciente.id_paciente,
@@ -560,8 +691,8 @@ try {
           documento.tipo,
           documento.nombreOriginal,
           documento.nombreArchivo,
-          rutaRelativa.replaceAll('\\', '/'),
-          tamano,
+          contenido,
+          contenido.length,
         ],
       )
     }

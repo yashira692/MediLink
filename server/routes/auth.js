@@ -3,7 +3,10 @@ import bcrypt from 'bcryptjs'
 import crypto from 'node:crypto'
 import jwt from 'jsonwebtoken'
 import pool from '../config/db.js'
-import { crearNotificacionConCanales } from '../services/canalesNotificacion.js'
+import {
+  crearNotificacionConCanales,
+  enviarCorreo,
+} from '../services/canalesNotificacion.js'
 import {
   passwordSegura,
   VERSION_AVISO_PRIVACIDAD,
@@ -295,7 +298,7 @@ router.post('/solicitar-recuperacion', async (req, res, next) => {
   const correo = limpiarTexto(req.body.correo).toLowerCase()
   const respuesta = {
     mensaje:
-      'Si el correo está registrado, se generó un enlace para restablecer la contraseña.',
+      'Si el correo está registrado, te enviamos un enlace para restablecer la contraseña. Revisa también la carpeta de spam.',
   }
 
   if (!correo) {
@@ -325,9 +328,28 @@ router.post('/solicitar-recuperacion', async (req, res, next) => {
       [usuario.id_usuario, tokenHash],
     )
 
+    const urlApp =
+      process.env.CLIENT_URL ||
+      process.env.RENDER_EXTERNAL_URL ||
+      'http://localhost:5173'
+    const enlace = `${urlApp}/?resetToken=${token}`
+
+    // Sin await: el tiempo de respuesta no debe revelar si el correo existe.
+    enviarCorreo(
+      correo,
+      'Recupera tu contraseña de MediLink',
+      'Recibimos una solicitud para cambiar tu contraseña. El enlace vence en 30 minutos. Si no fuiste tú, ignora este mensaje.',
+      enlace,
+    )
+      .then(({ estado, error }) => {
+        if (estado !== 'enviado') console.warn('Recuperación no enviada:', error)
+      })
+      .catch((error) => {
+        console.error('No se pudo enviar la recuperación:', error.message)
+      })
+
     if (process.env.NODE_ENV !== 'production') {
-      respuesta.enlaceDesarrollo =
-        `${process.env.CLIENT_URL || 'http://localhost:5173'}/?resetToken=${token}`
+      respuesta.enlaceDesarrollo = enlace
     }
 
     return res.json(respuesta)
