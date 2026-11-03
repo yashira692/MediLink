@@ -1041,6 +1041,132 @@ button:disabled {
   background: #f7fbff;
 }
 
+.nota-suave {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ===== PANEL DE ADMINISTRADOR ===== */
+
+.filtros-admin {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.filtros-admin label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.filtros-admin input,
+.filtros-admin select {
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  font-size: 14px;
+}
+
+.filtros-admin button {
+  padding: 13px 16px;
+}
+
+.indicadores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.indicador {
+  padding: 20px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  text-align: center;
+}
+
+.indicador strong {
+  display: block;
+  font-size: 32px;
+  line-height: 1.2;
+}
+
+.indicador span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.barra-fila {
+  display: grid;
+  grid-template-columns: minmax(110px, 170px) 1fr 40px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.barra-nombre {
+  overflow-wrap: anywhere;
+  text-align: right;
+  font-size: 14px;
+}
+
+.barra-pista {
+  height: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.barra-valor {
+  min-width: 3px;
+  height: 100%;
+  background: var(--primary);
+  border-radius: 0 4px 4px 0;
+}
+
+.barra-fila:hover .barra-valor {
+  background: var(--primary-dark);
+}
+
+.barra-numero {
+  text-align: left;
+}
+
+.reporte-acciones {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.tabla-contenedor {
+  overflow-x: auto;
+}
+
+.tabla-reporte {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  text-align: left;
+}
+
+.tabla-reporte th,
+.tabla-reporte td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.tabla-reporte th {
+  color: var(--muted);
+}
+
 /* ===== RESPONSIVE ===== */
 
 @media (max-width: 1000px) {

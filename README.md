@@ -79,6 +79,26 @@ desarrollo y no deben usarse en producción.
 
 Con la API iniciada, `node server/scripts/testMedico.js` prueba este perfil.
 
+## Panel de administrador
+
+El administrador usa la misma pantalla de inicio de sesión. Desde su panel puede:
+
+- Ver el dashboard del mes: citas, atendidas, canceladas, por atender, pacientes,
+  médicos y especialidades más demandadas.
+- Agregar, editar, desactivar y activar médicos. Un médico nuevo atiende de lunes
+  a sábado de 8:00 a 17:00.
+- Agregar, editar, desactivar y activar especialidades.
+- Generar reportes de citas por período, médico o especialidad, y descargarlos
+  en PDF o Excel. Los reportes no incluyen el motivo de consulta.
+
+Un médico con citas por atender o una especialidad con médicos activos no se
+puede desactivar.
+
+`npm.cmd run db:setup` crea la cuenta de demostración `admin@medilink.pe`, con la
+contraseña `Medilink2026!`. No debe usarse en producción.
+
+Con la API iniciada, `node server/scripts/testAdministrador.js` prueba este panel.
+
 ## Documentos médicos
 
 Los informes, recetas y resultados se registran en `documentos_medicos`. La API

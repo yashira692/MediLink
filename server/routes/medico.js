@@ -16,6 +16,7 @@ import {
   storageRoot,
 } from '../services/historial.js'
 import { crearPdfMedico } from '../utils/pdf.js'
+import { fechaValida } from '../utils/validacion.js'
 
 const router = Router()
 const FORMATO_FECHA = /^\d{4}-\d{2}-\d{2}$/
@@ -39,16 +40,6 @@ function recibirArchivo(req, res, next) {
 
     return next(error)
   })
-}
-
-function fechaValida(fecha) {
-  if (!FORMATO_FECHA.test(fecha || '')) return false
-
-  const convertida = new Date(`${fecha}T00:00:00Z`)
-  return (
-    !Number.isNaN(convertida.getTime()) &&
-    convertida.toISOString().slice(0, 10) === fecha
-  )
 }
 
 function nombreOriginalSeguro(nombre) {

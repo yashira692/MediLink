@@ -238,7 +238,7 @@ try {
     await connection.execute(
       `INSERT INTO especialidades (nombre, descripcion, estado)
        VALUES (?, ?, 1)
-       ON DUPLICATE KEY UPDATE descripcion = VALUES(descripcion), estado = 1`,
+       ON DUPLICATE KEY UPDATE id_especialidad = id_especialidad`,
       [nombre, descripcion],
     )
   }
@@ -250,11 +250,7 @@ try {
       `INSERT INTO usuarios
         (nombres, apellidos, dni, correo, telefono, password_hash, rol, estado)
        VALUES (?, ?, ?, ?, ?, ?, 'medico', 1)
-       ON DUPLICATE KEY UPDATE
-         nombres = VALUES(nombres),
-         apellidos = VALUES(apellidos),
-         telefono = VALUES(telefono),
-         estado = 1`,
+       ON DUPLICATE KEY UPDATE id_usuario = id_usuario`,
       [
         medico.nombres,
         medico.apellidos,
@@ -266,8 +262,8 @@ try {
     )
 
     const [[usuario]] = await connection.execute(
-      'SELECT id_usuario FROM usuarios WHERE correo = ?',
-      [medico.correo],
+      'SELECT id_usuario FROM usuarios WHERE dni = ?',
+      [medico.dni],
     )
     const [[especialidad]] = await connection.execute(
       'SELECT id_especialidad FROM especialidades WHERE nombre = ?',
@@ -277,7 +273,7 @@ try {
     await connection.execute(
       `INSERT INTO medicos (id_usuario, id_especialidad, cmp)
        VALUES (?, ?, ?)
-       ON DUPLICATE KEY UPDATE id_especialidad = VALUES(id_especialidad)`,
+       ON DUPLICATE KEY UPDATE id_medico = id_medico`,
       [usuario.id_usuario, especialidad.id_especialidad, medico.cmp],
     )
 
@@ -304,6 +300,15 @@ try {
       }
     }
   }
+
+  await connection.execute(
+    `INSERT INTO usuarios
+      (nombres, apellidos, dni, correo, telefono, password_hash, rol, estado)
+     VALUES ('Administrador', 'MediLink', '70000000', 'admin@medilink.pe',
+       '900000000', ?, 'administrador', 1)
+     ON DUPLICATE KEY UPDATE id_usuario = id_usuario`,
+    [passwordHash],
+  )
 
   await connection.commit()
   const [[medicoGeneral]] = await connection.execute(

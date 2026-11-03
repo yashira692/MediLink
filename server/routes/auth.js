@@ -4,6 +4,7 @@ import crypto from 'node:crypto'
 import jwt from 'jsonwebtoken'
 import pool from '../config/db.js'
 import { crearNotificacionConCanales } from '../services/canalesNotificacion.js'
+import { passwordSegura } from '../utils/validacion.js'
 
 const router = Router()
 const intentosLogin = new Map()
@@ -57,14 +58,14 @@ function medicoPublico(usuario) {
   }
 }
 
-function passwordSegura(password) {
-  return (
-    typeof password === 'string' &&
-    password.length >= 8 &&
-    /[A-Z]/.test(password) &&
-    /[a-z]/.test(password) &&
-    /\d/.test(password)
-  )
+function administradorPublico(usuario) {
+  return {
+    idUsuario: usuario.id_usuario,
+    nombres: usuario.nombres,
+    apellidos: usuario.apellidos,
+    correo: usuario.correo,
+    rol: usuario.rol,
+  }
 }
 
 function claveIntento(req, correo) {
@@ -230,6 +231,7 @@ router.post('/login', async (req, res, next) => {
          AND (
            (u.rol = 'paciente' AND p.id_paciente IS NOT NULL)
            OR (u.rol = 'medico' AND m.id_medico IS NOT NULL)
+           OR u.rol = 'administrador'
          )
        LIMIT 1`,
       [correo],
@@ -251,6 +253,13 @@ router.post('/login', async (req, res, next) => {
       return res.json({
         token: crearToken(usuario),
         medico: medicoPublico(usuario),
+      })
+    }
+
+    if (usuario.rol === 'administrador') {
+      return res.json({
+        token: crearToken(usuario),
+        administrador: administradorPublico(usuario),
       })
     }
 
@@ -277,7 +286,7 @@ router.post('/solicitar-recuperacion', async (req, res, next) => {
   try {
     const [usuarios] = await pool.execute(
       `SELECT id_usuario FROM usuarios
-       WHERE correo = ? AND rol IN ('paciente', 'medico') AND estado = 1 LIMIT 1`,
+       WHERE correo = ? AND rol IN ('paciente', 'medico', 'administrador') AND estado = 1 LIMIT 1`,
       [correo],
     )
     const usuario = usuarios[0]

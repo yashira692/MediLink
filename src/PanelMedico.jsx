@@ -524,7 +524,7 @@ function RegistrarConsulta({ cita, volver }) {
           <h3 className="receta-titulo">Receta digital</h3>
 
           {medicamentos.length === 0 && (
-            <p className="form-help">
+            <p className="nota-suave">
               Sin medicamentos: la consulta se registrará sin receta.
             </p>
           )}
@@ -705,7 +705,7 @@ function SubirDocumento({ idPaciente, historial, recargar }) {
   return (
     <form className="form-card subir-documento" onSubmit={enviar}>
       <h3>Subir documento PDF</h3>
-      <p className="form-help">
+      <p className="nota-suave">
         El paciente recibirá un aviso y podrá descargarlo desde su historial.
       </p>
 
@@ -757,7 +757,7 @@ function SubirDocumento({ idPaciente, historial, recargar }) {
               </option>
             ))}
           </select>
-          <p className="form-help">
+          <p className="nota-suave">
             Este PDF será el que descargue el paciente en lugar del informe actual.
           </p>
         </>
@@ -774,7 +774,7 @@ function SubirDocumento({ idPaciente, historial, recargar }) {
               </option>
             ))}
           </select>
-          <p className="form-help">
+          <p className="nota-suave">
             Este PDF será el que descargue el paciente en lugar de la receta actual.
           </p>
         </>

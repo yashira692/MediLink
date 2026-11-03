@@ -35,6 +35,14 @@ export async function autenticar(req, res, next) {
   }
 }
 
+export function soloAdministradores(req, res, next) {
+  if (req.usuario.rol !== 'administrador') {
+    return res.status(403).json({ mensaje: 'Acceso permitido solo a administradores.' })
+  }
+
+  return next()
+}
+
 export function soloMedicos(req, res, next) {
   if (req.usuario.rol !== 'medico' || !req.usuario.idMedico) {
     return res.status(403).json({ mensaje: 'Acceso permitido solo a médicos.' })

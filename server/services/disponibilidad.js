@@ -20,9 +20,12 @@ export async function obtenerDisponibilidad(connection, idMedico, fecha) {
   const diaSemanaJs = new Date(`${fecha}T12:00:00`).getDay()
   const diaSemana = diaSemanaJs === 0 ? 7 : diaSemanaJs
   const [jornadas] = await connection.execute(
-    `SELECT hora_inicio, hora_fin, duracion_minutos
-     FROM disponibilidad_medica
-     WHERE id_medico = ? AND dia_semana = ? AND estado = 1`,
+    `SELECT d.hora_inicio, d.hora_fin, d.duracion_minutos
+     FROM disponibilidad_medica d
+     INNER JOIN medicos m ON m.id_medico = d.id_medico
+     INNER JOIN usuarios u ON u.id_usuario = m.id_usuario
+     WHERE d.id_medico = ? AND d.dia_semana = ? AND d.estado = 1
+       AND u.estado = 1`,
     [idMedico, diaSemana],
   )
   const [ocupadas] = await connection.execute(

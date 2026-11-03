@@ -2,6 +2,7 @@ import 'dotenv/config'
 import cors from 'cors'
 import express from 'express'
 import { verificarConexion } from './config/db.js'
+import adminRoutes from './routes/admin.js'
 import asistenteRoutes from './routes/asistente.js'
 import authRoutes from './routes/auth.js'
 import citasRoutes from './routes/citas.js'
@@ -29,6 +30,7 @@ app.use('/api/paciente', pacienteRoutes)
 app.use('/api/citas', citasRoutes)
 app.use('/api/historial', historialRoutes)
 app.use('/api/medico', medicoRoutes)
+app.use('/api/admin', adminRoutes)
 app.use('/api/notificaciones', notificacionesRoutes)
 
 app.use((error, _req, res, _next) => {

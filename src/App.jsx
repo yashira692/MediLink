@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import HistorialMedico from './HistorialMedico.jsx'
+import PanelAdministrador from './PanelAdministrador.jsx'
 import PanelMedico from './PanelMedico.jsx'
 import {
   api,
@@ -46,16 +47,23 @@ function App() {
 
   const [paciente, setPaciente] = useState(null)
   const [medico, setMedico] = useState(null)
+  const [administrador, setAdministrador] = useState(null)
   const [sesionActiva, setSesionActiva] = useState(Boolean(obtenerToken()))
   const [cargandoSesion, setCargandoSesion] = useState(Boolean(obtenerToken()))
 
   useEffect(() => {
     if (!obtenerToken()) return
 
-    api(rolSesion() === 'medico' ? '/medico/perfil' : '/paciente/perfil')
+    const rutasPerfil = {
+      medico: '/medico/perfil',
+      administrador: '/admin/perfil',
+    }
+
+    api(rutasPerfil[rolSesion()] || '/paciente/perfil')
       .then((datos) => {
         setPaciente(datos.paciente || null)
         setMedico(datos.medico || null)
+        setAdministrador(datos.administrador || null)
         setSesionActiva(true)
       })
       .catch(() => {
@@ -187,6 +195,7 @@ function App() {
       guardarToken(datos.token)
       setPaciente(datos.paciente || null)
       setMedico(datos.medico || null)
+      setAdministrador(datos.administrador || null)
       setSesionActiva(true)
     } catch (error) {
       alert(error.message)
@@ -263,6 +272,7 @@ function App() {
     eliminarToken()
     setPaciente(null)
     setMedico(null)
+    setAdministrador(null)
     setSesionActiva(false)
   }
 
@@ -323,14 +333,22 @@ function App() {
     )
   }
 
-  if (medico) {
+  if (medico || administrador) {
     return (
       <>
-        <PanelMedico
-          medico={medico}
-          cerrarSesion={cerrarSesion}
-          solicitarConfirmacion={solicitarConfirmacion}
-        />
+        {medico ? (
+          <PanelMedico
+            medico={medico}
+            cerrarSesion={cerrarSesion}
+            solicitarConfirmacion={solicitarConfirmacion}
+          />
+        ) : (
+          <PanelAdministrador
+            administrador={administrador}
+            cerrarSesion={cerrarSesion}
+            solicitarConfirmacion={solicitarConfirmacion}
+          />
+        )}
         {modalConfirmacion}
         {aviso && (
           <div className={`app-toast ${aviso.tipo}`} role="status">
