@@ -47,7 +47,7 @@ function PanelAdministrador({ administrador, cerrarSesion, solicitarConfirmacion
   return (
     <div className="app">
       <aside className="sidebar">
-        <div className="logo">〽 MediLink</div>
+        <div className="logo"><i className="logo-mark">M</i>MediLink</div>
 
         {opciones.map(([id, texto]) => (
           <button

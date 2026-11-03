@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, descargarArchivo } from './services/api.js'
-import { etiquetaEstado, formatearFecha } from './utils/formato.js'
+import { claseEstado, etiquetaEstado, formatearFecha } from './utils/formato.js'
 
 function HistorialMedico({
   rutaHistorial = '/historial',
@@ -168,7 +168,7 @@ function HistorialMedico({
                   <h4>{resultado.nombreExamen}</h4>
                   <p><strong>Fecha:</strong> {formatearFecha(resultado.fecha)}</p>
                 </div>
-                <span className="estado">{etiquetaEstado(resultado.estado)}</span>
+                <span className={claseEstado(resultado.estado)}>{etiquetaEstado(resultado.estado)}</span>
               </div>
 
               {resultado.resultado && (

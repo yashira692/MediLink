@@ -25,6 +25,21 @@ export function etiquetaEstado(estado) {
   return estado.charAt(0).toUpperCase() + estado.slice(1)
 }
 
+export function claseEstado(estado) {
+  if (['cancelada', 'vencida', 'rechazada'].includes(estado)) return 'estado cancelada'
+  if (['pendiente', 'reprogramada'].includes(estado)) return 'estado pendiente'
+
+  return 'estado'
+}
+
+export function partesFecha(fecha) {
+  const valor = new Date(`${fecha}T00:00:00Z`)
+  const dia = new Intl.DateTimeFormat('es-PE', { day: '2-digit', timeZone: 'UTC' }).format(valor)
+  const mes = new Intl.DateTimeFormat('es-PE', { month: 'short', timeZone: 'UTC' }).format(valor)
+
+  return { dia, mes: mes.replace('.', '') }
+}
+
 export function sumarDias(fecha, dias) {
   const resultado = new Date(`${fecha}T00:00:00Z`)
   resultado.setUTCDate(resultado.getUTCDate() + dias)

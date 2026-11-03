@@ -56,7 +56,7 @@ export function PantallaConsentimiento({ aceptar, cerrarSesion }) {
   return (
     <div className="login-page">
       <form className="login-card" onSubmit={enviar}>
-        <div className="login-logo">〽 MediLink</div>
+        <div className="login-logo"><i className="logo-mark">M</i>MediLink</div>
         <h1>Aviso de privacidad</h1>
         <p className="subtitle">
           Para continuar, revisa cómo tratamos tus datos.

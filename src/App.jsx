@@ -2,6 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import { PantallaConsentimiento, TextoAvisoPrivacidad } from './AvisoPrivacidad.jsx'
 import HistorialMedico from './HistorialMedico.jsx'
+import {
+  IconoCalendario,
+  IconoCampana,
+  IconoChat,
+  IconoDocumento,
+} from './Iconos.jsx'
 import PanelAdministrador from './PanelAdministrador.jsx'
 import PanelMedico from './PanelMedico.jsx'
 import {
@@ -12,10 +18,12 @@ import {
   rolSesion,
 } from './services/api.js'
 import {
+  claseEstado,
   etiquetaEstado,
   fechaActual,
   formatearFecha,
   formatearHora,
+  partesFecha,
 } from './utils/formato.js'
 
 function formatearFechaHora(fecha) {
@@ -383,7 +391,7 @@ function App() {
   return (
     <div className="app">
       <aside className="sidebar">
-        <div className="logo">〽 MediLink</div>
+        <div className="logo"><i className="logo-mark">M</i>MediLink</div>
 
         <button
           className={vista === 'dashboard' ? 'menu active' : 'menu'}
@@ -430,8 +438,12 @@ function App() {
           </div>
 
           <div className="header-actions">
-            <button className="bell" onClick={() => setVista('notificaciones')}>
-              🔔
+            <button
+              className="bell"
+              aria-label="Notificaciones"
+              onClick={() => setVista('notificaciones')}
+            >
+              <IconoCampana />
               {notificacionesNoLeidas > 0 && <span>{notificacionesNoLeidas}</span>}
             </button>
 
@@ -470,7 +482,7 @@ function App() {
 
         <section className="content">
           {vista === 'dashboard' && (
-            <Dashboard 
+            <Dashboard paciente={paciente} 
               citas={citas} 
               setVista={setVista} 
               cancelarCita={cancelarCita} 
@@ -528,30 +540,33 @@ function App() {
   )
 }
 
-function Dashboard({ citas, setVista, cancelarCita }) {
+function Dashboard({ paciente, citas, setVista, cancelarCita }) {
   const proximasCitas = citas.filter(
     (cita) =>
       ['pendiente', 'confirmada', 'reprogramada'].includes(cita.estado) &&
       new Date(`${cita.fecha}T${cita.hora}`) > new Date(),
-  )
+  ).sort((a, b) => `${a.fecha}${a.hora}`.localeCompare(`${b.fecha}${b.hora}`))
 
   return (
     <>
-      <h1>Bienvenida a MediLink</h1>
+      <h1>Hola, {paciente.nombres.split(' ')[0]}</h1>
       <p className="subtitle">Este es tu resumen de salud y atención médica.</p>
 
       <div className="cards">
         <div className="card" onClick={() => setVista('reservar')}>
+          <div className="card-icon"><IconoCalendario /></div>
           <h3>Reservar cita</h3>
           <p>Agenda una visita con tu médico.</p>
         </div>
 
         <div className="card" onClick={() => setVista('asistente')}>
+          <div className="card-icon"><IconoChat /></div>
           <h3>Asistente IA</h3>
           <p>Consulta orientación básica.</p>
         </div>
 
         <div className="card" onClick={() => setVista('historial')}>
+          <div className="card-icon"><IconoDocumento /></div>
           <h3>Historial médico</h3>
           <p>Revisa tus registros médicos.</p>
         </div>
@@ -566,19 +581,24 @@ function Dashboard({ citas, setVista, cancelarCita }) {
 
         {proximasCitas.map((cita) => (
           <div className="appointment" key={cita.id}>
-            <div>
-              <h4>{cita.medico}</h4>
-              <p>{cita.especialidad}</p>
-              <span>{formatearFecha(cita.fecha)} - {formatearHora(cita.hora)}</span>
+            <div className="cita-resumen">
+              <div className="cita-fecha">
+                <b>{partesFecha(cita.fecha).dia}</b>
+                <small>{partesFecha(cita.fecha).mes}</small>
+              </div>
+              <div>
+                <h4>{cita.medico}</h4>
+                <p>{cita.especialidad} · {formatearHora(cita.hora)}</p>
+              </div>
             </div>
 
             <div className="cita-actions">
-              <span className="estado">{etiquetaEstado(cita.estado)}</span>
+              <span className={claseEstado(cita.estado)}>{etiquetaEstado(cita.estado)}</span>
               <button
                 className="cancel-btn"
                 onClick={() => cancelarCita(cita.id)}
               >
-                Cancelar cita
+                Cancelar
               </button>
             </div>
           </div>
@@ -941,7 +961,7 @@ function Notificaciones({ notificaciones, marcarLeida, marcarTodas }) {
             key={notificacion.id}
           >
             <div className={`notification-icon notification-${notificacion.tipo}`}>
-              {notificacion.tipo === 'cita' ? '📅' : '🔔'}
+              {notificacion.tipo === 'cita' ? <IconoCalendario /> : <IconoCampana />}
             </div>
             <div className="notification-content">
               <div className="notification-meta">
@@ -1302,7 +1322,7 @@ function LoginRegistro({ iniciarSesion, registrarPaciente }) {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div className="login-logo">〽 MediLink</div>
+        <div className="login-logo"><i className="logo-mark">M</i>MediLink</div>
 
         <h1>{titulos[modo]}</h1>
         <p>{descripciones[modo]}</p>
@@ -1542,7 +1562,7 @@ function MisCitas({ citas, cancelarCita, reprogramarCita }) {
             </div>
 
             <div className="cita-actions">
-              <span className={['cancelada', 'vencida'].includes(cita.estado) ? 'estado cancelada' : 'estado'}>
+              <span className={claseEstado(cita.estado)}>
                 {etiquetaEstado(cita.estado)}
               </span>
 

@@ -3,6 +3,7 @@ import CambiarPassword from './CambiarPassword.jsx'
 import HistorialMedico from './HistorialMedico.jsx'
 import { api } from './services/api.js'
 import {
+  claseEstado,
   etiquetaEstado,
   fechaActual,
   formatearFecha,
@@ -42,7 +43,7 @@ function PanelMedico({ medico, cerrarSesion, solicitarConfirmacion }) {
   return (
     <div className="app">
       <aside className="sidebar">
-        <div className="logo">〽 MediLink</div>
+        <div className="logo"><i className="logo-mark">M</i>MediLink</div>
 
         <button
           className={vista === 'agenda' ? 'menu active' : 'menu'}
@@ -321,7 +322,7 @@ function CitaAgenda({
       </div>
 
       <div className="cita-actions">
-        <span className={['cancelada', 'vencida'].includes(cita.estado) ? 'estado cancelada' : 'estado'}>
+        <span className={claseEstado(cita.estado)}>
           {etiquetaEstado(cita.estado)}
         </span>
 
