@@ -28,12 +28,20 @@ async function generarRespuestaLocal(pregunta) {
     contiene(texto, [
       'emergencia',
       'no puedo respirar',
+      'falta de aire',
+      'me ahogo',
       'dolor fuerte en el pecho',
-      'me desmayo',
+      'dolor en el pecho',
+      'dolor de pecho',
+      'dolor al pecho',
+      'duele el pecho',
+      'duele mucho el pecho',
+      'desmay',
       'sangrado abundante',
       'convulsion',
-      'quiero hacerme dano',
-      'quiero suicidarme',
+      'hacerme dano',
+      'suicid',
+      'matarme',
     ])
   ) {
     return {
@@ -50,7 +58,12 @@ async function generarRespuestaLocal(pregunta) {
       'que tengo',
       'recetame',
       'que medicamento tomo',
-      'dosis debo tomar',
+      'que medicamento debo',
+      'que medicamento puedo',
+      'que pastilla',
+      'puedo tomar',
+      'debo tomar',
+      'dosis',
     ])
   ) {
     return {
@@ -60,7 +73,7 @@ async function generarRespuestaLocal(pregunta) {
     }
   }
 
-  if (contiene(texto, ['cancelar', 'anular']) && texto.includes('cita')) {
+  if (contiene(texto, ['cancel', 'anul']) && texto.includes('cita')) {
     return {
       intent: 'cancelar_cita',
       respuesta:
@@ -69,7 +82,7 @@ async function generarRespuestaLocal(pregunta) {
   }
 
   if (
-    contiene(texto, ['reprogramar', 'cambiar', 'mover']) &&
+    contiene(texto, ['reprogram', 'cambi', 'mover', 'muevo']) &&
     texto.includes('cita')
   ) {
     return {
@@ -79,7 +92,7 @@ async function generarRespuestaLocal(pregunta) {
     }
   }
 
-  if (contiene(texto, ['reservar', 'agendar', 'sacar cita', 'nueva cita'])) {
+  if (contiene(texto, ['reserv', 'agend', 'sacar cita', 'saco una cita', 'sacar una cita', 'nueva cita'])) {
     return {
       intent: 'reservar_cita',
       respuesta:
@@ -136,7 +149,7 @@ async function generarRespuestaLocal(pregunta) {
 
   if (
     contiene(texto, [
-      'cambiar mis datos',
+      'mis datos',
       'editar perfil',
       'mi perfil',
       'cambiar correo',
@@ -206,6 +219,7 @@ async function generarRespuestaLocal(pregunta) {
     contiene(texto, [
       'sintoma',
       'dolor',
+      'duele',
       'fiebre',
       'mareo',
       'tos',

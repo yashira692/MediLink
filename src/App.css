@@ -252,6 +252,11 @@ button:disabled {
   top: -28px;
 }
 
+.card > * {
+  position: relative;
+  z-index: 1;
+}
+
 .card:hover {
   border-color: #b9d9f4;
   box-shadow: 0 16px 38px rgba(47, 127, 193, 0.14);

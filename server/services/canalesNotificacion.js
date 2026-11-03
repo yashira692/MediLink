@@ -42,19 +42,27 @@ function proveedorWhatsApp() {
   return (process.env.WHATSAPP_PROVIDER || 'meta').toLowerCase()
 }
 
+// Los valores de ejemplo de .env.example empiezan con "tu_".
+function valorConfigurado(valor) {
+  return Boolean(valor) && !valor.startsWith('tu_')
+}
+
 function whatsappConfigurado() {
-  return Boolean(
-    process.env.WHATSAPP_ACCESS_TOKEN &&
-      process.env.WHATSAPP_PHONE_NUMBER_ID,
+  return (
+    valorConfigurado(process.env.WHATSAPP_ACCESS_TOKEN) &&
+    valorConfigurado(process.env.WHATSAPP_PHONE_NUMBER_ID)
   )
 }
 
 function callMeBotConfigurado() {
-  return Boolean(process.env.CALLMEBOT_API_KEY)
+  return valorConfigurado(process.env.CALLMEBOT_API_KEY)
 }
 
 function correoConfigurado() {
-  return Boolean(process.env.SMTP_USER && process.env.SMTP_PASS)
+  return (
+    valorConfigurado(process.env.SMTP_USER) &&
+    valorConfigurado(process.env.SMTP_PASS)
+  )
 }
 
 function obtenerTransportadorCorreo() {
@@ -64,6 +72,9 @@ function obtenerTransportadorCorreo() {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: Number(process.env.SMTP_PORT || 465),
     secure: process.env.SMTP_SECURE !== 'false',
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
