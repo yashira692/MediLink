@@ -25,8 +25,8 @@ const carpetaFrontend = path.resolve(
   '../dist',
 )
 
-// Los proxies de Render usan IP privadas: la IP real es la última pública de la cadena.
-if (enProduccion) app.set('trust proxy', 'loopback, uniquelocal')
+// En Render llegan tres saltos: balanceador, proxy interno y Cloudflare. El siguiente es el usuario.
+if (enProduccion) app.set('trust proxy', 3)
 
 function limiteSolicitudes(ventanaMinutos, limite) {
   return rateLimit({
