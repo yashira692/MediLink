@@ -25,8 +25,8 @@ const carpetaFrontend = path.resolve(
   '../dist',
 )
 
-// Render atiende por un proxy: sin esto, todos los usuarios compartirían la misma IP.
-if (enProduccion) app.set('trust proxy', 1)
+// Los proxies de Render usan IP privadas: la IP real es la última pública de la cadena.
+if (enProduccion) app.set('trust proxy', 'loopback, uniquelocal')
 
 function limiteSolicitudes(ventanaMinutos, limite) {
   return rateLimit({
